@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>登录 · 摸鱼商超</title>
+    <title>摸鱼网盘 · 极速云存储</title>
     <style>
         * {
             margin: 0;
@@ -12,685 +12,2297 @@
         }
 
         body {
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(145deg, #0B1622 0%, #0F212F 100%);
+            font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f0f4f8;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            transition: background 0.5s ease, color 0.5s ease;
         }
 
-        .login-container {
-            max-width: 420px;
-            width: 100%;
-            background: rgba(15, 25, 45, 0.85);
-            backdrop-filter: blur(20px);
-            border-radius: 48px;
-            padding: 40px 32px;
-            border: 1px solid rgba(46, 204, 113, 0.2);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        body.dark-mode {
+            background: #0d1a26;
+            color: #d0e4f0;
         }
 
-        .logo {
-            text-align: center;
-            margin-bottom: 32px;
+        /* ===== VIP金色特效 ===== */
+        body.vip-gold .container {
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.15), 0 20px 60px rgba(0, 0, 0, 0.08);
+        }
+        body.vip-gold .logo-area h1 {
+            color: #D4A017;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+        }
+        body.vip-gold .storage-info .size span {
+            color: #D4A017;
+        }
+        body.vip-gold .progress-fill {
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+        }
+        body.vip-gold .toolbar .btn.primary {
+            background: linear-gradient(135deg, #D4A017, #B8860B);
+        }
+        body.vip-gold .vip-badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+            color: #5a3a00 !important;
+        }
+        body.vip-gold .badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+            color: #5a3a00 !important;
+        }
+        body.vip-gold.dark-mode .container {
+            border-color: #FFD700;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.08), 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        body.vip-gold.dark-mode .logo-area h1 {
+            color: #FFD700;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.15);
+        }
+        body.vip-gold.dark-mode .storage-info .size span {
+            color: #FFD700;
         }
 
-        .logo .icon {
-            font-size: 52px;
+        .vip-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 600px;
+            height: 600px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.03) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            display: none;
+            animation: glowPulse 3s ease-in-out infinite;
+        }
+        body.vip-gold .vip-glow {
             display: block;
-            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes glowPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
-        }
-
-        .logo h1 {
-            font-size: 28px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #FACC15, #2ECC71);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin-top: 8px;
-        }
-
-        .logo p {
-            color: #94A3B8;
-            font-size: 14px;
-            margin-top: 4px;
-        }
-
-        .tab {
+        /* ===== 进入动画 ===== */
+        .splash-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(145deg, #1a2a3a, #0d1a26);
             display: flex;
-            gap: 8px;
-            background: #0F172A;
-            border-radius: 40px;
-            padding: 4px;
-            margin-bottom: 24px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            transition: opacity 0.8s ease, transform 0.8s ease;
         }
-
-        .tab-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 36px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: transparent;
-            color: #94A3B8;
+        .splash-screen.hide {
+            opacity: 0;
+            transform: scale(1.05);
+            pointer-events: none;
         }
-
-        .tab-btn.active {
-            background: linear-gradient(135deg, #2ECC71, #27AE60);
-            color: white;
-            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+        .splash-screen .logo {
+            font-size: 72px;
+            animation: splashFloat 1.2s ease-in-out infinite alternate;
         }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            color: #94A3B8;
-            margin-bottom: 6px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 14px 18px;
-            background: #020617;
-            border: 1px solid #2D3A5E;
-            border-radius: 40px;
-            color: #E2E8F0;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .form-group input:focus {
-            border-color: #2ECC71;
-            box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
-        }
-
-        .form-group input::placeholder {
-            color: #475569;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(95deg, #2ECC71, #27AE60);
-            border: none;
-            border-radius: 40px;
-            color: white;
-            font-size: 18px;
+        .splash-screen .title {
+            font-size: 28px;
             font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 8px;
+            color: #fff;
+            margin-top: 12px;
+            letter-spacing: 4px;
+        }
+        .splash-screen .title span {
+            color: #4FC3F7;
+        }
+        .splash-screen .bar {
+            margin-top: 24px;
+            width: 200px;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .splash-screen .bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4FC3F7, #29B6F6);
+            border-radius: 10px;
+            animation: splashProgress 1.8s ease forwards;
+        }
+        @keyframes splashFloat {
+            0% { transform: translateY(-6px) scale(1); }
+            100% { transform: translateY(6px) scale(1.02); }
+        }
+        @keyframes splashProgress {
+            0% { width: 0%; }
+            100% { width: 100%; }
         }
 
-        .btn-submit:active {
-            transform: scale(0.97);
+        /* ===== 主容器 ===== */
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 28px 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: containerFadeIn 0.6s ease 2s forwards;
+            transition: background 0.3s ease, box-shadow 0.5s ease, border 0.5s ease;
+            position: relative;
+            z-index: 1;
         }
-
-        .btn-submit:hover {
-            box-shadow: 0 4px 20px rgba(46, 204, 113, 0.3);
+        body.dark-mode .container {
+            background: #1a2a3a;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
-
-        .btn-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .error-msg {
-            color: #EF4444;
-            font-size: 13px;
-            margin-top: 8px;
-            display: none;
-            text-align: center;
-        }
-
-        .success-msg {
-            color: #2ECC71;
-            font-size: 13px;
-            margin-top: 8px;
-            display: none;
-            text-align: center;
-        }
-
-        .footer {
-            text-align: center;
-            color: #475569;
-            font-size: 12px;
-            margin-top: 20px;
-        }
-
-        .form-panel {
-            display: none;
-        }
-
-        .form-panel.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(10px); }
+        @keyframes containerFadeIn {
+            0% { opacity: 0; transform: translateY(20px); }
             100% { opacity: 1; transform: translateY(0); }
         }
 
-        .divider {
+        /* ===== 头部 ===== */
+        .header {
             display: flex;
             align-items: center;
-            margin: 18px 0 16px;
-            color: #475569;
-            font-size: 12px;
+            justify-content: space-between;
+            flex-wrap: wrap;
             gap: 12px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid #eef2f6;
+            transition: border-color 0.3s ease;
+        }
+        body.dark-mode .header {
+            border-bottom-color: #2a3a4a;
         }
 
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #2D3A5E;
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-
-        .btn-quick-view {
-            width: 100%;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .logo-area .icon { font-size: 32px; }
+        .logo-area h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a2a3a;
+            letter-spacing: -0.5px;
+            transition: color 0.5s ease;
+        }
+        body.dark-mode .logo-area h1 { color: #e0ecf5; }
+        .logo-area .badge {
+            font-size: 10px;
+            background: #e3f2fd;
+            color: #1565C0;
+            padding: 2px 12px;
             border-radius: 40px;
-            color: #94A3B8;
-            font-size: 15px;
+            font-weight: 600;
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+        body.dark-mode .logo-area .badge {
+            background: #1a3a5a;
+            color: #4FC3F7;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-service {
+            background: linear-gradient(135deg, #4FC3F7, #0288D1);
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: none;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-service:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(2, 136, 209, 0.3);
+        }
+        .btn-service.visible { display: inline-flex; }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid #dde4ea;
+            border-radius: 40px;
+            padding: 6px 14px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #1a2a3a;
+        }
+        body.dark-mode .theme-toggle {
+            border-color: #3a4a5a;
+            color: #e0ecf5;
+        }
+        .theme-toggle:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+        body.dark-mode .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #5a6a7a;
+            font-size: 13px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .user-info { color: #8aaec8; }
+        .user-info .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4FC3F7, #0288D1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        /* ===== 存储条 ===== */
+        .storage-bar {
+            margin: 18px 0 22px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            transition: background 0.3s ease;
+        }
+        body.dark-mode .storage-bar {
+            background: #0f1f2f;
+        }
+        .storage-info .label {
+            font-size: 12px;
+            color: #7a8a9a;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .storage-info .label { color: #6a8aaa; }
+        .storage-info .size {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a2a3a;
+            transition: color 0.5s ease;
+        }
+        body.dark-mode .storage-info .size { color: #e0ecf5; }
+        .storage-info .size span {
+            color: #0288D1;
+            transition: color 0.5s ease;
+        }
+
+        .progress-track {
+            flex: 2;
+            min-width: 100px;
+            height: 6px;
+            background: #e8ecf0;
+            border-radius: 20px;
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+        body.dark-mode .progress-track { background: #1a2a3a; }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4FC3F7, #0288D1);
+            border-radius: 20px;
+            transition: width 0.6s ease, background 0.5s ease;
+        }
+        .storage-action {
+            font-size: 12px;
+            color: #5a7a9a;
+            cursor: pointer;
+            padding: 4px 14px;
+            border-radius: 20px;
+            border: 1px solid #dde4ea;
+            transition: 0.2s;
+            background: white;
+        }
+        body.dark-mode .storage-action {
+            background: #0f1f2f;
+            border-color: #2a3a4a;
+            color: #8aaec8;
+        }
+        .storage-action:hover {
+            background: #f0f4f8;
+            border-color: #b0c4d8;
+        }
+        body.dark-mode .storage-action:hover {
+            background: #1a2a3a;
+            border-color: #4a5a6a;
+        }
+
+        /* ===== 工具栏 ===== */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 18px;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+        body.dark-mode .toolbar { background: #0f1f2f; }
+
+        .toolbar .btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 40px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: transparent;
+            color: #3a5a7a;
+        }
+        body.dark-mode .toolbar .btn { color: #8aaec8; }
+        .toolbar .btn:hover {
+            background: rgba(0, 0, 0, 0.04);
+            color: #1a2a3a;
+        }
+        body.dark-mode .toolbar .btn:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: #e0ecf5;
+        }
+        .toolbar .btn.primary {
+            background: linear-gradient(135deg, #0288D1, #01579B);
+            color: white;
+            box-shadow: 0 2px 8px rgba(2, 136, 209, 0.2);
+            transition: background 0.5s ease;
+        }
+        .toolbar .btn.primary:hover {
+            box-shadow: 0 4px 16px rgba(2, 136, 209, 0.3);
+            transform: translateY(-1px);
+        }
+        .toolbar .btn .icon { font-size: 14px; }
+        .toolbar .spacer { flex: 1; }
+        .toolbar .btn.danger { color: #e74c3c; }
+        .toolbar .btn.danger:hover { background: rgba(231, 76, 60, 0.08); }
+        .toolbar .btn.gold { color: #f39c12; }
+        .toolbar .btn.gold:hover { background: rgba(243, 156, 18, 0.08); }
+
+        /* ===== 面包屑 ===== */
+        .breadcrumb {
+            font-size: 13px;
+            color: #7a8a9a;
+            margin-bottom: 12px;
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        body.dark-mode .breadcrumb { color: #6a8aaa; }
+        .breadcrumb .crumb {
+            cursor: pointer;
+            color: #0288D1;
+            font-weight: 500;
+        }
+        .breadcrumb .crumb:hover { text-decoration: underline; }
+        body.dark-mode .breadcrumb .crumb { color: #4FC3F7; }
+        .breadcrumb .sep { color: #8a9aaa; }
+
+        /* ===== 文件列表 ===== */
+        .file-list-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 4px 10px 4px;
+            color: #7a8a9a;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #eef2f6;
+            transition: border-color 0.3s ease, color 0.3s ease;
+        }
+        body.dark-mode .file-list-header {
+            color: #6a8aaa;
+            border-bottom-color: #2a3a4a;
         }
 
-        .btn-quick-view:hover {
-            background: rgba(255, 255, 255, 0.12);
-            color: #E2E8F0;
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+        .file-list { min-height: 240px; }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 6px;
+            border-bottom: 1px solid #f0f2f5;
+            transition: 0.15s;
+            border-radius: 8px;
+            cursor: default;
+        }
+        body.dark-mode .file-item { border-bottom-color: #1a2a3a; }
+        .file-item:hover { background: #f8fafc; }
+        body.dark-mode .file-item:hover { background: #0f1f2f; }
+
+        .file-item .file-icon { font-size: 24px; width: 36px; text-align: center; flex-shrink: 0; }
+        .file-item .file-info { flex: 1; min-width: 0; }
+        .file-item .file-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a2a3a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .file-item .file-name { color: #d0e4f0; }
+        .file-item .file-meta {
+            font-size: 11px;
+            color: #8a9aaa;
+            margin-top: 2px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .file-item .file-meta { color: #6a8aaa; }
+        .file-item .file-size {
+            font-size: 13px;
+            color: #5a6a7a;
+            flex-shrink: 0;
+            margin-right: 6px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .file-item .file-size { color: #7a8a9a; }
+
+        .file-item .file-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .file-item .file-actions button {
+            background: none;
+            border: none;
+            color: #7a8a9a;
+            cursor: pointer;
+            font-size: 15px;
+            padding: 3px 6px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        body.dark-mode .file-item .file-actions button { color: #5a7a8a; }
+        .file-item .file-actions button:hover {
+            background: rgba(0, 0, 0, 0.04);
+            color: #1a2a3a;
+        }
+        body.dark-mode .file-item .file-actions button:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: #e0ecf5;
+        }
+        .file-item .file-actions .del:hover { color: #e74c3c; }
+        .file-item .file-actions .share-btn:hover { color: #f39c12; }
+        .file-item .file-actions .folder-open:hover { color: #0288D1; }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #8a9aaa;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .empty-state { color: #6a8aaa; }
+        .empty-state .icon { font-size: 48px; display: block; margin-bottom: 10px; opacity: 0.3; }
+        .empty-state .text { font-size: 14px; }
+
+        /* ===== 记录弹窗 ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 32px 30px;
+            max-width: 520px;
+            width: 100%;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+            animation: modalIn 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+            transition: background 0.3s ease;
+        }
+        body.dark-mode .modal-card {
+            background: #1a2a3a;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+        }
+        @keyframes modalIn {
+            0% { transform: scale(0.95) translateY(10px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .modal-card .icon { font-size: 44px; margin-bottom: 6px; display: block; }
+        .modal-card .title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a2a3a;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .modal-card .title { color: #e0ecf5; }
+        .modal-card .sub {
+            font-size: 13px;
+            color: #7a8a9a;
+            margin: 4px 0 16px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .modal-card .sub { color: #8aaec8; }
+        .modal-card .form-group {
+            margin-bottom: 14px;
+            text-align: left;
+        }
+        .modal-card .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #3a5a7a;
+            margin-bottom: 4px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .modal-card .form-group label { color: #8aaec8; }
+        .modal-card .form-group input,
+        .modal-card .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #dde4ea;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: 0.2s;
+            background: #f8fafc;
+            color: #1a2a3a;
+        }
+        body.dark-mode .modal-card .form-group input,
+        body.dark-mode .modal-card .form-group select {
+            background: #0f1f2f;
+            border-color: #2a3a4a;
+            color: #d0e4f0;
+        }
+        .modal-card .form-group input:focus,
+        .modal-card .form-group select:focus {
+            border-color: #0288D1;
+            box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
+        }
+        .modal-card .share-link-box {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #0288D1;
+            font-size: 13px;
+            word-break: break-all;
+            border: 1px solid #eef2f6;
+            margin-bottom: 14px;
+            cursor: pointer;
+            user-select: all;
+            font-weight: 500;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+        body.dark-mode .share-link-box {
+            background: #0f1f2f;
+            border-color: #2a3a4a;
+            color: #4FC3F7;
+        }
+        .modal-card .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .modal-card .btn-group .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            flex: 1;
+            min-width: 80px;
+        }
+        .modal-card .btn-group .btn.primary {
+            background: linear-gradient(135deg, #0288D1, #01579B);
+            color: white;
+        }
+        .modal-card .btn-group .btn.primary:hover {
+            box-shadow: 0 4px 16px rgba(2, 136, 209, 0.25);
+        }
+        .modal-card .btn-group .btn.gold {
+            background: #fef9e7;
+            color: #f39c12;
+        }
+        body.dark-mode .modal-card .btn-group .btn.gold {
+            background: #2a2a1a;
+            color: #f39c12;
+        }
+        .modal-card .btn-group .btn.gold:hover {
+            background: #fdf3d0;
+        }
+        body.dark-mode .modal-card .btn-group .btn.gold:hover {
+            background: #3a3a2a;
+        }
+        .modal-card .btn-group .btn.close {
+            background: #f0f2f5;
+            color: #5a6a7a;
+        }
+        body.dark-mode .modal-card .btn-group .btn.close {
+            background: #0f1f2f;
+            color: #8aaec8;
+        }
+        .modal-card .btn-group .btn.close:hover {
+            background: #e4e8ec;
+        }
+        body.dark-mode .modal-card .btn-group .btn.close:hover {
+            background: #1a2a3a;
         }
 
-        .btn-quick-view:active {
-            transform: scale(0.97);
+        /* ===== 记录列表样式 ===== */
+        .record-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 8px;
+            border-bottom: 1px solid #f0f2f5;
+            font-size: 13px;
+            transition: border-color 0.3s ease;
+        }
+        body.dark-mode .record-item { border-bottom-color: #1a2a3a; }
+        .record-item .record-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+        .record-item .record-info { flex: 1; }
+        .record-item .record-name { font-weight: 500; color: #1a2a3a; }
+        body.dark-mode .record-item .record-name { color: #d0e4f0; }
+        .record-item .record-detail {
+            font-size: 12px;
+            color: #7a8a9a;
+            margin-top: 2px;
+        }
+        body.dark-mode .record-item .record-detail { color: #6a8aaa; }
+        .record-item .record-time {
+            font-size: 11px;
+            color: #8a9aaa;
+            flex-shrink: 0;
+        }
+        body.dark-mode .record-item .record-time { color: #5a7a8a; }
+        .record-type-upload { border-left: 3px solid #0288D1; padding-left: 10px; }
+        .record-type-delete { border-left: 3px solid #e74c3c; padding-left: 10px; }
+        .record-type-restore { border-left: 3px solid #2ecc71; padding-left: 10px; }
+
+        /* ===== 客服聊天 ===== */
+        .chat-modal .modal-card {
+            max-width: 500px;
+            padding: 20px 24px;
+        }
+        .chat-messages {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 12px 0;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            transition: background 0.3s ease;
+        }
+        body.dark-mode .chat-messages {
+            background: #0f1f2f;
+        }
+        .chat-msg {
+            padding: 8px 14px;
+            margin: 6px 0;
+            border-radius: 16px;
+            max-width: 85%;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .chat-msg.user {
+            background: #0288D1;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-msg.bot {
+            background: #e8ecf0;
+            color: #1a2a3a;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+        body.dark-mode .chat-msg.bot {
+            background: #2a3a4a;
+            color: #d0e4f0;
+        }
+        .chat-input-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .chat-input-group input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #dde4ea;
+            border-radius: 40px;
+            font-size: 14px;
+            outline: none;
+            transition: 0.2s;
+            background: #f8fafc;
+            color: #1a2a3a;
+        }
+        body.dark-mode .chat-input-group input {
+            background: #0f1f2f;
+            border-color: #2a3a4a;
+            color: #d0e4f0;
+        }
+        .chat-input-group input:focus {
+            border-color: #0288D1;
+            box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
+        }
+        .chat-input-group .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 40px;
+            background: linear-gradient(135deg, #0288D1, #01579B);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .chat-input-group .btn:hover {
+            box-shadow: 0 4px 16px rgba(2, 136, 209, 0.25);
         }
 
+        /* ===== 上传弹窗 ===== */
+        .upload-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+        .upload-modal.active { display: flex; }
+        .upload-modal .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 32px 28px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: modalIn 0.3s ease;
+            transition: background 0.3s ease;
+        }
+        body.dark-mode .upload-modal .card { background: #1a2a3a; }
+        .upload-modal .card .icon { font-size: 44px; margin-bottom: 8px; display: block; }
+        .upload-modal .card .title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a2a3a;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .upload-modal .card .title { color: #e0ecf5; }
+        .upload-modal .card .sub {
+            font-size: 14px;
+            color: #7a8a9a;
+            margin-bottom: 16px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .upload-modal .card .sub { color: #8aaec8; }
+        .upload-modal .card .progress-track {
+            height: 6px;
+            background: #e8ecf0;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 12px 0;
+            transition: background 0.3s ease;
+        }
+        body.dark-mode .upload-modal .card .progress-track { background: #1a2a3a; }
+        .upload-modal .card .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4FC3F7, #0288D1);
+            border-radius: 20px;
+            transition: width 0.3s ease;
+        }
+        .upload-modal .card .progress-text {
+            font-size: 13px;
+            color: #5a6a7a;
+            margin-top: 6px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .upload-modal .card .progress-text { color: #8aaec8; }
+
+        /* ===== Toast ===== */
         .toast {
             position: fixed;
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(80px);
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(12px);
-            color: #fff;
+            background: #1a2a3a;
+            color: #ffffff;
             padding: 10px 24px;
             border-radius: 40px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             z-index: 9999;
             opacity: 0;
             transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-            border: 1px solid rgba(255,255,255,0.06);
             pointer-events: none;
             max-width: 90%;
             text-align: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
         }
-
         .toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
 
-        .toast.error {
-            border-color: rgba(239,68,68,0.3);
+        /* ===== 回收站侧栏 ===== */
+        .recycle-sidebar {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 400px;
+            height: 100%;
+            background: #ffffff;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.08);
+            z-index: 10002;
+            transition: right 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease;
+            padding: 24px 20px;
+            overflow-y: auto;
+            border-left: 1px solid #eef2f6;
         }
-
-        .toast.success {
-            border-color: rgba(46,204,113,0.3);
+        body.dark-mode .recycle-sidebar {
+            background: #1a2a3a;
+            border-left-color: #2a3a4a;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.3);
         }
-
-        .saved-hint {
-            color: #2ECC71;
-            font-size: 12px;
+        .recycle-sidebar.open { right: 0; }
+        .recycle-sidebar .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eef2f6;
+            margin-bottom: 16px;
+            transition: border-color 0.3s ease;
+        }
+        body.dark-mode .recycle-sidebar .header { border-bottom-color: #2a3a4a; }
+        .recycle-sidebar .header h2 {
+            color: #1a2a3a;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .recycle-sidebar .header h2 { color: #e0ecf5; }
+        .recycle-sidebar .header .close {
+            background: none;
+            border: none;
+            color: #7a8a9a;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .recycle-sidebar .header .close { color: #6a8aaa; }
+        .recycle-sidebar .header .close:hover { color: #1a2a3a; }
+        body.dark-mode .recycle-sidebar .header .close:hover { color: #e0ecf5; }
+        .recycle-sidebar .empty {
             text-align: center;
-            margin-top: 6px;
-            display: none;
+            color: #8a9aaa;
+            padding: 50px 0;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .recycle-sidebar .empty { color: #6a8aaa; }
+        .recycle-sidebar .empty .icon { font-size: 44px; display: block; margin-bottom: 10px; opacity: 0.3; }
+        .recycle-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 6px;
+            border-bottom: 1px solid #f0f2f5;
+            transition: border-color 0.3s ease;
+        }
+        body.dark-mode .recycle-item { border-bottom-color: #1a2a3a; }
+        .recycle-item .info { flex: 1; }
+        .recycle-item .info .name {
+            color: #1a2a3a;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .recycle-item .info .name { color: #d0e4f0; }
+        .recycle-item .info .meta {
+            color: #8a9aaa;
+            font-size: 11px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .recycle-item .info .meta { color: #6a8aaa; }
+        .recycle-item .actions { display: flex; gap: 4px; }
+        .recycle-item .actions button {
+            background: none;
+            border: none;
+            color: #7a8a9a;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        body.dark-mode .recycle-item .actions button { color: #5a7a8a; }
+        .recycle-item .actions .restore:hover { color: #0288D1; }
+        .recycle-item .actions .del:hover { color: #e74c3c; }
+
+        /* ===== VIP 会员样式 ===== */
+        .vip-card {
+            background: linear-gradient(135deg, #fef9e7, #fdf3d0);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin: 12px 0;
+            border: 1px solid #f39c12;
+            transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+        }
+        body.dark-mode .vip-card {
+            background: linear-gradient(135deg, #1a2a1a, #2a3a1a);
+            border-color: #f39c12;
+        }
+        .vip-card:hover {
+            transform: translateY(-2px);
+        }
+        .vip-card .vip-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a2a3a;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .vip-card .vip-title { color: #e0ecf5; }
+        .vip-card .vip-desc {
+            font-size: 13px;
+            color: #5a6a7a;
+            margin: 4px 0 10px;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .vip-card .vip-desc { color: #8aaec8; }
+        .vip-card .vip-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: #e67e22;
+        }
+        .vip-card .vip-features {
+            font-size: 12px;
+            color: #5a6a7a;
+            margin: 6px 0;
+            transition: color 0.3s ease;
+        }
+        body.dark-mode .vip-card .vip-features { color: #8aaec8; }
+        .vip-card .vip-features span { display: inline-block; margin-right: 12px; }
+        .vip-badge {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+        .vip-badge.svip1 { background: #d4edda; color: #155724; }
+        .vip-badge.svip2 { background: #cce5ff; color: #004085; }
+        .vip-badge.svip3 { background: #fce4ec; color: #721c24; }
+        .vip-badge.svip4 { background: #f3e5f5; color: #4a148c; }
+        .vip-badge.svip5 { background: #fff3cd; color: #856404; }
+        .vip-badge.svip6 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #5a3a00; }
+        .vip-badge.svip7 { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #5a3a00; }
+        .vip-badge.svip8 { background: linear-gradient(135deg, #FFD700, #FF6B00); color: #5a3a00; }
+        .vip-badge.svip9 { background: linear-gradient(135deg, #FFD700, #FF4500); color: #5a3a00; }
+        .vip-badge.svip10 { background: linear-gradient(135deg, #FFD700, #FF0000); color: #5a3a00; }
+
+        body.dark-mode .vip-badge.svip1 { background: #1a3a2a; color: #5aaa7a; }
+        body.dark-mode .vip-badge.svip2 { background: #1a2a4a; color: #5a8aca; }
+        body.dark-mode .vip-badge.svip3 { background: #3a1a1a; color: #da5a5a; }
+        body.dark-mode .vip-badge.svip4 { background: #2a1a3a; color: #aa5ada; }
+        body.dark-mode .vip-badge.svip5 { background: #2a2a1a; color: #daaa3a; }
+        body.dark-mode .vip-badge.svip6,
+        body.dark-mode .vip-badge.svip7,
+        body.dark-mode .vip-badge.svip8,
+        body.dark-mode .vip-badge.svip9,
+        body.dark-mode .vip-badge.svip10 {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #5a3a00;
         }
 
-        .saved-hint.show {
-            display: block;
-            animation: fadeIn 0.3s ease;
+        .btn-buy-vip {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-buy-vip:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(243, 156, 18, 0.3);
         }
 
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 28px 20px;
-                border-radius: 32px;
-            }
-            .logo h1 {
-                font-size: 24px;
-            }
+        /* ===== 响应式 ===== */
+        @media (max-width: 600px) {
+            .container { padding: 18px 14px; border-radius: 18px; }
+            .logo-area h1 { font-size: 18px; }
+            .logo-area .icon { font-size: 26px; }
+            .toolbar { padding: 6px 8px; gap: 4px; }
+            .toolbar .btn { font-size: 11px; padding: 4px 10px; }
+            .file-item { padding: 8px 4px; gap: 8px; flex-wrap: wrap; }
+            .file-item .file-icon { font-size: 20px; width: 28px; }
+            .file-item .file-name { font-size: 12px; }
+            .file-item .file-size { font-size: 11px; }
+            .storage-info .size { font-size: 15px; }
+            .user-info { font-size: 12px; }
+            .user-info .avatar { width: 28px; height: 28px; font-size: 12px; }
+            .recycle-sidebar { width: 100%; right: -100%; }
+            .modal-card { padding: 24px 18px; }
+            .upload-modal .card { padding: 24px 18px; }
+            .splash-screen .logo { font-size: 48px; }
+            .splash-screen .title { font-size: 20px; }
+            .modal-card .btn-group .btn { min-width: 60px; font-size: 12px; padding: 6px 12px; }
+            .vip-card { padding: 12px 16px; }
+            .header-right { gap: 6px; }
+            .theme-toggle { padding: 4px 10px; font-size: 14px; }
+            .btn-service { font-size: 10px; padding: 4px 12px; }
+        }
+        @media (max-width: 400px) {
+            .container { padding: 12px 8px; border-radius: 14px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 6px; }
+            .user-info { align-self: flex-start; }
+            .storage-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+            .toolbar { flex-wrap: wrap; justify-content: center; }
+            .toolbar .spacer { display: none; }
+            .file-list-header { font-size: 10px; }
+            .header-right { width: 100%; justify-content: flex-start; }
         }
     </style>
 </head>
 <body>
-<div class="login-container">
-    <div class="logo">
-        <span class="icon">🐟</span>
-        <h1>摸鱼商超</h1>
-        <p>登录开启摸鱼之旅</p>
+
+    <!-- ===== 豪华特效光晕 ===== -->
+    <div class="vip-glow"></div>
+
+    <!-- ===== 进入动画 ===== -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="logo">☁️</div>
+        <div class="title">摸鱼<span>网盘</span></div>
+        <div class="bar"><div class="bar-fill"></div></div>
     </div>
 
-    <div class="tab">
-        <button class="tab-btn active" data-tab="login">登录</button>
-        <button class="tab-btn" data-tab="register">注册</button>
+    <!-- ===== 主容器 ===== -->
+    <div class="container" id="mainContainer">
+        <div class="header">
+            <div class="logo-area">
+                <span class="icon">☁️</span>
+                <h1>摸鱼网盘</h1>
+                <span class="badge" id="vipBadge">免费</span>
+            </div>
+            <div class="header-right">
+                <button class="btn-service" id="serviceBtn">💬 客服</button>
+                <button class="theme-toggle" id="themeToggle">🌙</button>
+                <div class="user-info">
+                    <span>🐟 摸鱼仙人</span>
+                    <div class="avatar">🐟</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="storage-bar">
+            <div class="storage-info">
+                <div class="label">已用存储</div>
+                <div class="size"><span id="usedSize">0</span> MB / <span id="totalSize">10</span> GB</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="storageFill"></div>
+            </div>
+            <div class="storage-action" id="refreshBtn">⟳ 刷新</div>
+        </div>
+
+        <div class="breadcrumb" id="breadcrumb">
+            <span class="crumb" data-path="" onclick="navigateTo('')">📁 根目录</span>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn primary" id="uploadBtn"><span class="icon">⬆</span> 上传</button>
+            <button class="btn" id="newFolderBtn"><span class="icon">📁</span> 新建文件夹</button>
+            <button class="btn gold" id="shareAllBtn"><span class="icon">🔗</span> 分享全部</button>
+            <button class="btn" id="recycleBtn"><span class="icon">🗑️</span> 回收站</button>
+            <button class="btn gold" id="recordBtn"><span class="icon">📋</span> 记录</button>
+            <span class="spacer"></span>
+            <button class="btn gold" id="vipBtn"><span class="icon">👑</span> 会员</button>
+            <button class="btn" id="sortBtn"><span class="icon">↕</span> 排序</button>
+            <button class="btn danger" id="clearBtn"><span class="icon">🗑️</span> 清空</button>
+        </div>
+
+        <div class="file-list-header">
+            <span>📄 名称</span>
+            <span style="margin-right: 60px;">大小</span>
+        </div>
+        <div class="file-list" id="fileList"></div>
     </div>
 
-    <!-- 登录表单 -->
-    <div class="form-panel active" id="loginPanel">
-        <div class="form-group">
-            <label>👤 用户名</label>
-            <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+    <!-- ===== 上传弹窗 ===== -->
+    <div class="upload-modal" id="uploadModal">
+        <div class="card">
+            <span class="icon" id="modalIcon">📤</span>
+            <div class="title" id="modalTitle">正在上传</div>
+            <div class="sub" id="modalSub">文件正在传输中...</div>
+            <div class="progress-track"><div class="progress-fill" id="modalProgress"></div></div>
+            <div class="progress-text" id="modalProgressText">0%</div>
         </div>
-        <div class="form-group">
-            <label>🔒 密码</label>
-            <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
-        </div>
-        <button class="btn-submit" id="loginBtn">登录</button>
-        <div class="saved-hint" id="savedHint">💾 已保存账号，点击登录即可</div>
-        <div class="error-msg" id="loginError">用户名或密码错误</div>
-        <div class="success-msg" id="loginSuccess">登录成功，正在跳转...</div>
     </div>
 
-    <!-- 注册表单 -->
-    <div class="form-panel" id="registerPanel">
-        <div class="form-group">
-            <label>👤 用户名</label>
-            <input type="text" id="regUsername" placeholder="请输入用户名（2-16位）" autocomplete="new-username">
+    <!-- ===== 分享弹窗 ===== -->
+    <div class="modal-overlay" id="shareModal">
+        <div class="modal-card">
+            <span class="icon">🔗</span>
+            <div class="title" id="shareTitle">分享文件</div>
+            <div class="sub" id="shareSub">设置分享选项</div>
+            <div class="form-group">
+                <label>🔑 提取码（自定义）</label>
+                <input type="text" id="shareCode" placeholder="4-8位字母或数字" value="moyu123" maxlength="8">
+            </div>
+            <div class="form-group">
+                <label>👥 分享人数限制</label>
+                <select id="shareLimit">
+                    <option value="0">不限</option>
+                    <option value="1">1人</option>
+                    <option value="5">5人</option>
+                    <option value="10">10人</option>
+                    <option value="20">20人</option>
+                    <option value="50">50人</option>
+                    <option value="100">100人</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>⏰ 有效期</label>
+                <select id="shareExpiry">
+                    <option value="0">永久</option>
+                    <option value="1">1天</option>
+                    <option value="7">7天</option>
+                    <option value="30">30天</option>
+                </select>
+            </div>
+            <div class="share-link-box" id="shareLink" onclick="copyShareLink()">正在生成...</div>
+            <div class="btn-group">
+                <button class="btn primary" onclick="copyShareLink()">📋 复制链接</button>
+                <button class="btn gold" onclick="shareViaWechat()">💬 微信分享</button>
+                <button class="btn close" id="shareCloseBtn">关闭</button>
+            </div>
         </div>
-        <div class="form-group">
-            <label>📛 昵称</label>
-            <input type="text" id="regNickname" placeholder="请输入昵称（选填）" autocomplete="new-username">
-        </div>
-        <div class="form-group">
-            <label>🔒 密码</label>
-            <input type="password" id="regPassword" placeholder="请输入密码（至少4位）" autocomplete="new-password">
-        </div>
-        <div class="form-group">
-            <label>🔒 确认密码</label>
-            <input type="password" id="regConfirmPassword" placeholder="请再次输入密码" autocomplete="new-password">
-        </div>
-        <button class="btn-submit" id="registerBtn">注册</button>
-        <div class="error-msg" id="regError">注册失败，请检查输入</div>
-        <div class="success-msg" id="regSuccess">注册成功，请登录</div>
     </div>
 
-    <!-- 分隔线 -->
-    <div class="divider">或</div>
-
-    <!-- 简单看看按钮（无需注册） -->
-    <button class="btn-quick-view" id="quickViewBtn">👀 简单看看（无需注册）</button>
-
-    <div class="footer">
-        🎮 摸鱼商超 · 仅供娱乐
+    <!-- ===== VIP会员弹窗 ===== -->
+    <div class="modal-overlay" id="vipModal">
+        <div class="modal-card">
+            <span class="icon">👑</span>
+            <div class="title">摸鱼网盘 · 会员中心</div>
+            <div class="sub" id="vipStatus">当前等级：免费用户</div>
+            <div id="vipList"></div>
+            <div class="btn-group" style="margin-top:16px;">
+                <button class="btn close" id="vipCloseBtn">关闭</button>
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- Toast 提示 -->
-<div class="toast" id="toast"></div>
+    <!-- ===== 记录弹窗 ===== -->
+    <div class="modal-overlay" id="recordModal">
+        <div class="modal-card">
+            <span class="icon">📋</span>
+            <div class="title">文件操作记录</div>
+            <div class="sub" id="recordCount">共 0 条记录</div>
+            <div id="recordList" style="max-height:400px; overflow-y:auto;"></div>
+            <div class="btn-group" style="margin-top:16px;">
+                <button class="btn close" id="recordCloseBtn">关闭</button>
+                <button class="btn danger" id="clearRecordBtn" style="background:#e74c3c; color:white;">清空记录</button>
+            </div>
+        </div>
+    </div>
 
-<script>
-    (function() {
-        // ==================== 配置 ====================
-        const REDIRECT_URL = 'moyu.html';
-        const QUICK_VIEW_URL = 'moyu2.html';
-        const REGISTERED_USERS_KEY = 'moyu_registered_users';
+    <!-- ===== 客服聊天弹窗 ===== -->
+    <div class="modal-overlay chat-modal" id="chatModal">
+        <div class="modal-card">
+            <span class="icon">💬</span>
+            <div class="title">摸鱼网盘 · 专属客服</div>
+            <div class="sub">VIP6+ 尊享服务 · 24小时在线</div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-msg bot">👋 您好！我是摸鱼网盘的专属客服，很高兴为您服务！</div>
+                <div class="chat-msg bot">💎 您是尊贵的VIP用户，有任何问题都可以问我哦～</div>
+            </div>
+            <div class="chat-input-group">
+                <input type="text" id="chatInput" placeholder="输入您的问题..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                <button class="btn" onclick="sendChatMessage()">发送</button>
+            </div>
+            <div class="btn-group" style="margin-top:12px;">
+                <button class="btn close" id="chatCloseBtn">关闭</button>
+            </div>
+        </div>
+    </div>
 
-        // 预置测试账号（不可修改）
-        const TEST_USERS = {
-            'moyu': { password: '123456', nickname: '摸鱼仙人', avatar: '🐟' },
-            'xiao_miao': { password: '123456', nickname: '林小喵', avatar: '🐱' },
-            'wang_cai': { password: '123456', nickname: '王财主', avatar: '💰' },
-            'li_gou': { password: '123456', nickname: '李狗蛋', avatar: '🐶' },
-            'hua_jie': { password: '123456', nickname: '花姐', avatar: '🌸' },
-            'bohe': { password: '123456', nickname: '薄荷', avatar: '🌿' }
-        };
+    <!-- ===== 回收站侧栏 ===== -->
+    <div class="recycle-sidebar" id="recycleSidebar">
+        <div class="header">
+            <h2>🗑️ 回收站</h2>
+            <button class="close" id="closeRecycleBtn">✖</button>
+        </div>
+        <div id="recycleList"></div>
+        <div style="margin-top:16px;">
+            <button id="emptyRecycleBtn" style="width:100%; padding:10px; border:1px solid #e74c3c; border-radius:40px; background:transparent; color:#e74c3c; font-weight:600; cursor:pointer;">清空回收站</button>
+        </div>
+    </div>
 
-        // 注册用户存储（从 localStorage 加载）
-        let registeredUsers = {};
+    <!-- ===== Toast ===== -->
+    <div class="toast" id="toast"></div>
 
-        // ==================== 加载/保存注册用户 ====================
-        function loadRegisteredUsers() {
-            try {
-                const saved = localStorage.getItem(REGISTERED_USERS_KEY);
-                if (saved) {
-                    registeredUsers = JSON.parse(saved);
-                } else {
-                    registeredUsers = {};
+    <script>
+        (function() {
+            'use strict';
+
+            // ==================== 状态 ====================
+            let files = [];
+            let fileIdCounter = 0;
+            let totalUsedMB = 0;
+            const TOTAL_GB = 10;
+            const TOTAL_MB = TOTAL_GB * 1024;
+            let recycleBin = [];
+            let recycleIdCounter = 0;
+            let currentShareFile = null;
+            let shareCodeCache = 'moyu123';
+            let currentPath = '';
+            let vipLevel = 0;
+            let isDarkMode = false;
+
+            // ==================== 操作记录 ====================
+            let operationRecords = [];
+            let recordIdCounter = 0;
+
+            function addRecord(type, fileName, fileSize, detail) {
+                const types = {
+                    'upload': { icon: '📤', label: '上传' },
+                    'delete': { icon: '🗑️', label: '删除' },
+                    'restore': { icon: '↩️', label: '恢复' },
+                    'folder': { icon: '📁', label: '创建文件夹' }
+                };
+                const info = types[type] || { icon: '📋', label: '操作' };
+                operationRecords.unshift({
+                    id: ++recordIdCounter,
+                    type: type,
+                    icon: info.icon,
+                    label: info.label,
+                    fileName: fileName,
+                    fileSize: fileSize || '—',
+                    detail: detail || '',
+                    time: new Date().toLocaleString()
+                });
+                // 最多保存200条
+                if (operationRecords.length > 200) {
+                    operationRecords = operationRecords.slice(0, 200);
                 }
-            } catch (e) {
-                registeredUsers = {};
+                saveRecords();
             }
-        }
 
-        function saveRegisteredUsers() {
-            try {
-                localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers));
-            } catch (e) {}
-        }
+            function saveRecords() {
+                try {
+                    localStorage.setItem('moyu_records', JSON.stringify(operationRecords));
+                } catch (e) {}
+            }
 
-        // DOM 元素
-        const loginPanel = document.getElementById('loginPanel');
-        const registerPanel = document.getElementById('registerPanel');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const quickViewBtn = document.getElementById('quickViewBtn');
-        const loginUsername = document.getElementById('loginUsername');
-        const loginPassword = document.getElementById('loginPassword');
-        const regUsername = document.getElementById('regUsername');
-        const regNickname = document.getElementById('regNickname');
-        const regPassword = document.getElementById('regPassword');
-        const regConfirmPassword = document.getElementById('regConfirmPassword');
-        const loginError = document.getElementById('loginError');
-        const loginSuccess = document.getElementById('loginSuccess');
-        const regError = document.getElementById('regError');
-        const regSuccess = document.getElementById('regSuccess');
-        const savedHint = document.getElementById('savedHint');
-        const toast = document.getElementById('toast');
+            function loadRecords() {
+                try {
+                    const saved = localStorage.getItem('moyu_records');
+                    if (saved) {
+                        operationRecords = JSON.parse(saved);
+                        recordIdCounter = operationRecords.length > 0 ? operationRecords[0].id : 0;
+                    }
+                } catch (e) {
+                    operationRecords = [];
+                }
+            }
 
-        let toastTimer = null;
+            function renderRecords() {
+                const container = document.getElementById('recordList');
+                const countEl = document.getElementById('recordCount');
+                countEl.textContent = `共 ${operationRecords.length} 条记录`;
 
-        // ==================== 加载保存的登录数据 ====================
-        function loadSavedLogin() {
-            try {
-                const saved = localStorage.getItem('moyu_saved_login');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    if (data.username && data.password) {
-                        loginUsername.value = data.username;
-                        loginPassword.value = data.password;
-                        savedHint.textContent = `💾 已保存账号: ${data.username}，点击登录即可`;
-                        savedHint.classList.add('show');
-                        return true;
+                if (operationRecords.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state" style="padding:30px 20px;">
+                            <span class="icon">📋</span>
+                            <div class="text">暂无操作记录</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                for (let i = 0; i < operationRecords.length; i++) {
+                    const r = operationRecords[i];
+                    const typeClass = r.type === 'upload' ? 'record-type-upload' :
+                                     r.type === 'delete' ? 'record-type-delete' :
+                                     r.type === 'restore' ? 'record-type-restore' : '';
+                    html += `
+                        <div class="record-item ${typeClass}">
+                            <span class="record-icon">${r.icon}</span>
+                            <div class="record-info">
+                                <div class="record-name">${r.label}：${escapeHtml(r.fileName)}</div>
+                                <div class="record-detail">${escapeHtml(r.detail)} ${r.fileSize !== '—' ? '· ' + r.fileSize : ''}</div>
+                            </div>
+                            <div class="record-time">${r.time}</div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+            }
+
+            // ==================== VIP 配置 ====================
+            const VIP_CONFIG = [
+                { level: 0, name: '免费', storage: 10, price: 0, color: '', features: [] },
+                { level: 1, name: 'SVIP1', storage: 50, price: 9.9, color: 'svip1', features: ['50GB存储', '在线预览'] },
+                { level: 2, name: 'SVIP2', storage: 100, price: 19.9, color: 'svip2', features: ['100GB存储', '在线预览', '极速下载'] },
+                { level: 3, name: 'SVIP3', storage: 200, price: 29.9, color: 'svip3', features: ['200GB存储', '在线预览', '极速下载', '批量上传'] },
+                { level: 4, name: 'SVIP4', storage: 500, price: 49.9, color: 'svip4', features: ['500GB存储', '在线预览', '极速下载', '批量上传', '历史版本'] },
+                { level: 5, name: 'SVIP5', storage: 1000, price: 79.9, color: 'svip5', features: ['1TB存储', '在线预览', '极速下载', '批量上传', '历史版本'] },
+                { level: 6, name: 'SVIP6', storage: 2000, price: 129.9, color: 'svip6', features: ['2TB存储', '在线预览', '极速下载', '批量上传', '历史版本', '云解压', '🌟金色尊享'] },
+                { level: 7, name: 'SVIP7', storage: 5000, price: 199.9, color: 'svip7', features: ['5TB存储', '在线预览', '极速下载', '批量上传', '历史版本', '云解压', '专属客服', '🌟金色尊享'] },
+                { level: 8, name: 'SVIP8', storage: 10000, price: 299.9, color: 'svip8', features: ['10TB存储', '在线预览', '极速下载', '批量上传', '历史版本', '云解压', '专属客服', '🌟金色尊享', '豪华特效'] },
+                { level: 9, name: 'SVIP9', storage: 50000, price: 499.9, color: 'svip9', features: ['50TB存储', '在线预览', '极速下载', '批量上传', '历史版本', '云解压', '专属客服', '🌟金色尊享', '豪华特效', '全球加速'] },
+                { level: 10, name: 'SVIP10', storage: 100000, price: 999.9, color: 'svip10', features: ['100TB存储', '在线预览', '极速下载', '批量上传', '历史版本', '云解压', '专属客服', '🌟金色尊享', '豪华特效', '全球加速', '终身会员'] }
+            ];
+
+            // DOM 引用
+            const fileListEl = document.getElementById('fileList');
+            const usedSizeEl = document.getElementById('usedSize');
+            const totalSizeEl = document.getElementById('totalSize');
+            const storageFill = document.getElementById('storageFill');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const newFolderBtn = document.getElementById('newFolderBtn');
+            const sortBtn = document.getElementById('sortBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const recycleBtn = document.getElementById('recycleBtn');
+            const shareAllBtn = document.getElementById('shareAllBtn');
+            const vipBtn = document.getElementById('vipBtn');
+            const recordBtn = document.getElementById('recordBtn');
+            const serviceBtn = document.getElementById('serviceBtn');
+            const closeRecycleBtn = document.getElementById('closeRecycleBtn');
+            const emptyRecycleBtn = document.getElementById('emptyRecycleBtn');
+            const recycleSidebar = document.getElementById('recycleSidebar');
+            const recycleList = document.getElementById('recycleList');
+            const toast = document.getElementById('toast');
+            const uploadModal = document.getElementById('uploadModal');
+            const modalProgress = document.getElementById('modalProgress');
+            const modalProgressText = document.getElementById('modalProgressText');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalSub = document.getElementById('modalSub');
+            const modalIcon = document.getElementById('modalIcon');
+            const shareModal = document.getElementById('shareModal');
+            const shareLink = document.getElementById('shareLink');
+            const shareTitle = document.getElementById('shareTitle');
+            const shareSub = document.getElementById('shareSub');
+            const shareCodeInput = document.getElementById('shareCode');
+            const shareLimitSelect = document.getElementById('shareLimit');
+            const shareExpirySelect = document.getElementById('shareExpiry');
+            const shareCloseBtn = document.getElementById('shareCloseBtn');
+            const splashScreen = document.getElementById('splashScreen');
+            const vipModal = document.getElementById('vipModal');
+            const vipList = document.getElementById('vipList');
+            const vipStatus = document.getElementById('vipStatus');
+            const vipCloseBtn = document.getElementById('vipCloseBtn');
+            const vipBadge = document.getElementById('vipBadge');
+            const themeToggle = document.getElementById('themeToggle');
+            const breadcrumb = document.getElementById('breadcrumb');
+            const chatModal = document.getElementById('chatModal');
+            const chatMessages = document.getElementById('chatMessages');
+            const chatInput = document.getElementById('chatInput');
+            const chatCloseBtn = document.getElementById('chatCloseBtn');
+            const recordModal = document.getElementById('recordModal');
+            const recordCloseBtn = document.getElementById('recordCloseBtn');
+            const clearRecordBtn = document.getElementById('clearRecordBtn');
+
+            let toastTimer = null;
+            let isUploading = false;
+            let sortAsc = true;
+
+            // ==================== 客服回复库 ====================
+            const botResponses = [
+                '您好！很高兴为您服务～ 😊',
+                '这个问题我帮您查一下，请稍等...',
+                '亲，根据系统显示，您的账号一切正常哦 👍',
+                '您说的这个问题，我们建议您刷新一下页面试试～',
+                '抱歉呢亲，这个功能暂时不支持，我们正在开发中 🚀',
+                '收到您的反馈了，我们会尽快处理！感谢您的支持 ❤️',
+                '亲，您太可爱了～ 这个问题我们帮您记录下来了 📝',
+                '关于您的问题，我这边建议您升级到SVIP6以上，享受更多权益 😄',
+                '不能退款哦亲～ 这是我们的服务条款呢 😊',
+                '感谢您选择摸鱼网盘！我们会继续努力 💪',
+                '亲，您现在是尊贵的VIP用户，所有功能都可以正常使用哦 ✨',
+                '这个问题已经帮您反馈给技术团队了，请耐心等待～ ⏳',
+                '摸鱼网盘祝您生活愉快！有什么需要随时找我们 😘',
+                '亲，您的意见对我们很重要！已经记录下来啦 📋',
+                '这个功能需要SVIP6以上才能使用哦，要不要考虑升级一下呢？ 🌟'
+            ];
+
+            // ==================== 工具函数 ====================
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>"]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    if (m === '"') return '&quot;';
+                    return m;
+                });
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+                return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+            }
+
+            function parseSizeToMB(sizeStr) {
+                const num = parseFloat(sizeStr);
+                if (sizeStr.includes('GB')) return num * 1024;
+                if (sizeStr.includes('MB')) return num;
+                if (sizeStr.includes('KB')) return num / 1024;
+                return num / 1024 / 1024;
+            }
+
+            function getFileIcon(ext) {
+                const map = {
+                    '.docx': '📄', '.doc': '📄', '.pdf': '📕', '.xlsx': '📊', '.xls': '📊',
+                    '.txt': '📝', '.zip': '📦', '.rar': '📦', '.7z': '📦', '.gz': '📦',
+                    '.jpg': '🖼️', '.jpeg': '🖼️', '.png': '🖼️', '.gif': '🖼️', '.bmp': '🖼️',
+                    '.mp4': '🎬', '.avi': '🎬', '.mkv': '🎬', '.mov': '🎬',
+                    '.mp3': '🎵', '.wav': '🎵', '.flac': '🎵',
+                    '.exe': '⚙️', '.msi': '⚙️', '.apk': '📱',
+                    '.html': '🌐', '.css': '🎨', '.js': '⚡', '.json': '📋',
+                    '.py': '🐍', '.java': '☕', '.cpp': '⚡', '.c': '⚡',
+                    '.psd': '🎨', '.ai': '🎨', '.svg': '📐',
+                };
+                return map[ext.toLowerCase()] || '📄';
+            }
+
+            function getTotalStorage() {
+                const vip = VIP_CONFIG[vipLevel];
+                return vip ? vip.storage : 10;
+            }
+
+            // ==================== Toast ====================
+            function showToast(msg) {
+                if (toastTimer) { clearTimeout(toastTimer); toast.classList.remove('show'); }
+                void toast.offsetWidth;
+                toast.textContent = msg;
+                toast.className = 'toast';
+                toast.classList.add('show');
+                toastTimer = setTimeout(() => { toast.classList.remove('show'); toastTimer = null; }, 2800);
+            }
+
+            // ==================== 进入动画 ====================
+            setTimeout(() => {
+                splashScreen.classList.add('hide');
+                setTimeout(() => {
+                    splashScreen.style.display = 'none';
+                }, 800);
+            }, 2200);
+
+            // ==================== VIP特效 ====================
+            function updateVIPEffects() {
+                const isGold = vipLevel >= 6;
+                document.body.classList.toggle('vip-gold', isGold);
+                serviceBtn.classList.toggle('visible', isGold);
+            }
+
+            // ==================== 客服 ====================
+            function openChat() {
+                chatModal.classList.add('active');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function closeChat() {
+                chatModal.classList.remove('active');
+            }
+
+            window.sendChatMessage = function() {
+                const msg = chatInput.value.trim();
+                if (!msg) return;
+
+                const userDiv = document.createElement('div');
+                userDiv.className = 'chat-msg user';
+                userDiv.textContent = msg;
+                chatMessages.appendChild(userDiv);
+
+                chatInput.value = '';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                setTimeout(() => {
+                    const response = botResponses[Math.floor(Math.random() * botResponses.length)];
+                    const botDiv = document.createElement('div');
+                    botDiv.className = 'chat-msg bot';
+                    botDiv.textContent = '🤖 ' + response;
+                    chatMessages.appendChild(botDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                    if (msg.includes('退款') || msg.includes('退钱') || (msg.includes('退') && msg.includes('钱'))) {
+                        setTimeout(() => {
+                            const extraDiv = document.createElement('div');
+                            extraDiv.className = 'chat-msg bot';
+                            extraDiv.textContent = '🤖 不能退款哦亲～ 这是我们的服务条款呢 😊 感谢您的理解！';
+                            chatMessages.appendChild(extraDiv);
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }, 500);
+                    }
+                }, 400 + Math.random() * 600);
+            };
+
+            // ==================== 夜间模式 ====================
+            function toggleTheme() {
+                isDarkMode = !isDarkMode;
+                document.body.classList.toggle('dark-mode', isDarkMode);
+                themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+                localStorage.setItem('moyu_theme', isDarkMode ? 'dark' : 'light');
+            }
+
+            function loadTheme() {
+                const saved = localStorage.getItem('moyu_theme');
+                if (saved === 'dark') {
+                    isDarkMode = true;
+                    document.body.classList.add('dark-mode');
+                    themeToggle.textContent = '☀️';
+                }
+            }
+
+            // ==================== 存储更新 ====================
+            function updateStorageUI() {
+                const totalMB = getTotalStorage() * 1024;
+                const percent = Math.min((totalUsedMB / totalMB) * 100, 100);
+                usedSizeEl.textContent = totalUsedMB.toFixed(0);
+                storageFill.style.width = percent + '%';
+                totalSizeEl.textContent = getTotalStorage();
+            }
+
+            // ==================== 面包屑 ====================
+            function updateBreadcrumb() {
+                const parts = currentPath.split('/').filter(p => p);
+                let html = `<span class="crumb" data-path="" onclick="navigateTo('')">📁 根目录</span>`;
+                let path = '';
+                for (let i = 0; i < parts.length; i++) {
+                    path += (i === 0 ? '' : '/') + parts[i];
+                    const isLast = i === parts.length - 1;
+                    if (isLast) {
+                        html += `<span class="sep"> / </span><span>📁 ${escapeHtml(parts[i])}</span>`;
+                    } else {
+                        html += `<span class="sep"> / </span><span class="crumb" data-path="${path}" onclick="navigateTo('${path}')">📁 ${escapeHtml(parts[i])}</span>`;
                     }
                 }
-            } catch (e) {}
-            return false;
-        }
+                breadcrumb.innerHTML = html;
+            }
 
-        // ==================== 保存登录数据 ====================
-        function saveLoginData(username, password) {
-            try {
-                localStorage.setItem('moyu_saved_login', JSON.stringify({
-                    username: username,
-                    password: password,
-                    savedAt: Date.now()
-                }));
-            } catch (e) {}
-        }
-
-        // ==================== Toast ====================
-        function showToast(msg, type = 'info') {
-            if (toastTimer) {
-                clearTimeout(toastTimer);
-                toast.classList.remove('show');
-            }
-            void toast.offsetWidth;
-            toast.textContent = msg;
-            toast.className = 'toast';
-            if (type === 'error') toast.classList.add('error');
-            if (type === 'success') toast.classList.add('success');
-            toast.classList.add('show');
-            toastTimer = setTimeout(() => {
-                toast.classList.remove('show');
-                toastTimer = null;
-            }, 2500);
-        }
-
-        // ==================== 用户验证 ====================
-        function findUser(username) {
-            // 先检查测试账号
-            if (TEST_USERS[username]) {
-                return {
-                    username: username,
-                    password: TEST_USERS[username].password,
-                    nickname: TEST_USERS[username].nickname,
-                    avatar: TEST_USERS[username].avatar,
-                    is_test: true
-                };
-            }
-            // 再检查注册用户
-            if (registeredUsers[username]) {
-                return {
-                    username: username,
-                    password: registeredUsers[username].password,
-                    nickname: registeredUsers[username].nickname,
-                    avatar: registeredUsers[username].avatar || '🐟',
-                    is_test: false
-                };
-            }
-            return null;
-        }
-
-        function loginUser(username, password) {
-            const user = findUser(username);
-            if (!user) {
-                return { success: false, error: '用户名不存在' };
-            }
-            if (user.password !== password) {
-                return { success: false, error: '密码错误' };
-            }
-            return { success: true, user: user };
-        }
-
-        function registerUser(username, password, nickname) {
-            // 检查是否与测试账号冲突
-            if (TEST_USERS[username]) {
-                return { success: false, error: '用户名已被占用（系统账号）' };
-            }
-            // 检查是否已被注册
-            if (registeredUsers[username]) {
-                return { success: false, error: '用户名已被注册' };
-            }
-            // 保存注册用户
-            registeredUsers[username] = {
-                password: password,
-                nickname: nickname || username,
-                avatar: ['🐟', '🐱', '🐶', '🦊', '🐼', '🐨', '🐸', '🐙', '🦄', '🌟'][Math.floor(Math.random() * 10)]
+            window.navigateTo = function(path) {
+                currentPath = path;
+                updateBreadcrumb();
+                renderFiles();
             };
-            saveRegisteredUsers();
-            return { success: true };
-        }
 
-        // ==================== 登录跳转 ====================
-        function redirectToMain(user) {
-            localStorage.setItem('moyu_current_user', JSON.stringify(user));
-            localStorage.setItem('assets', '1000');
-            localStorage.setItem('moyu_user_login', Date.now().toString());
-            showToast('✅ 登录成功，欢迎回来！', 'success');
-            setTimeout(() => {
-                window.location.href = REDIRECT_URL;
-            }, 600);
-        }
+            // ==================== 获取当前目录文件 ====================
+            function getCurrentFiles() {
+                return files.filter(f => {
+                    const filePath = f.path || '';
+                    if (currentPath === '' && filePath === '') return true;
+                    if (currentPath === '' && filePath.includes('/')) return false;
+                    if (filePath === currentPath) return true;
+                    if (filePath.startsWith(currentPath + '/')) return false;
+                    return false;
+                });
+            }
 
-        // ==================== 切换 Tab ====================
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const tab = this.dataset.tab;
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
-                if (tab === 'login') {
-                    loginPanel.classList.add('active');
-                    loginError.style.display = 'none';
-                    loginSuccess.style.display = 'none';
+            // ==================== 渲染文件列表 ====================
+            function renderFiles() {
+                const currentFiles = getCurrentFiles();
+                const isRoot = currentPath === '';
+
+                if (currentFiles.length === 0) {
+                    fileListEl.innerHTML = `
+                        <div class="empty-state">
+                            <span class="icon">📂</span>
+                            <div class="text">${isRoot ? '网盘空空如也～' : '此文件夹为空'}<br>点击「上传」开始存储</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                const folders = currentFiles.filter(f => f.isFolder);
+                const fileItems = currentFiles.filter(f => !f.isFolder);
+                const sorted = [...folders, ...fileItems];
+
+                for (let i = 0; i < sorted.length; i++) {
+                    const f = sorted[i];
+                    const isFolder = f.isFolder;
+                    html += `
+                        <div class="file-item" data-id="${f.id}">
+                            <span class="file-icon">${isFolder ? '📁' : (f.icon || '📄')}</span>
+                            <div class="file-info">
+                                <div class="file-name">${escapeHtml(f.name)}</div>
+                                <div class="file-meta">${f.date || ''}</div>
+                            </div>
+                            <span class="file-size">${isFolder ? '—' : f.size}</span>
+                            <div class="file-actions">
+                                ${isFolder ? `<button class="folder-open" data-id="${f.id}" title="打开">📂</button>` : `<button class="share-btn" data-id="${f.id}" title="分享">🔗</button>`}
+                                ${!isFolder ? `<button class="download-btn" data-id="${f.id}" title="下载">⬇️</button>` : ''}
+                                <button class="del" data-id="${f.id}" title="删除">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                fileListEl.innerHTML = html;
+
+                fileListEl.querySelectorAll('.folder-open').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = parseInt(this.dataset.id);
+                        const file = files.find(f => f.id === id);
+                        if (file && file.isFolder) {
+                            navigateTo(file.path || file.name.replace('/', ''));
+                        }
+                    });
+                });
+
+                fileListEl.querySelectorAll('.share-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = parseInt(this.dataset.id);
+                        const file = files.find(f => f.id === id);
+                        if (file) openShareModal(file);
+                    });
+                });
+
+                fileListEl.querySelectorAll('.download-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = parseInt(this.dataset.id);
+                        const file = files.find(f => f.id === id);
+                        if (file) downloadFile(file);
+                    });
+                });
+
+                fileListEl.querySelectorAll('.del').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = parseInt(this.dataset.id);
+                        const file = files.find(f => f.id === id);
+                        if (file && confirm(`确定删除 "${file.name}" 吗？`)) {
+                            moveToRecycle(file);
+                        }
+                    });
+                });
+            }
+
+            // ==================== 回收站 ====================
+            function moveToRecycle(file) {
+                const sizeMB = parseSizeToMB(file.size);
+                totalUsedMB = Math.max(0, totalUsedMB - sizeMB);
+                files = files.filter(f => f.id !== file.id);
+                recycleBin.unshift({
+                    id: ++recycleIdCounter,
+                    fileId: file.id,
+                    name: file.name,
+                    size: file.size,
+                    icon: file.icon,
+                    date: file.date,
+                    path: file.path || '',
+                    isFolder: file.isFolder || false,
+                    deletedAt: new Date().toLocaleString()
+                });
+                addRecord('delete', file.name, file.size, '移至回收站');
+                updateStorageUI();
+                renderFiles();
+                renderRecycleList();
+                showToast(`🗑️ 已移至回收站: ${file.name}`);
+            }
+
+            function renderRecycleList() {
+                if (recycleBin.length === 0) {
+                    recycleList.innerHTML = `
+                        <div class="empty">
+                            <span class="icon">🗑️</span>
+                            <div>回收站是空的</div>
+                        </div>
+                    `;
+                    return;
+                }
+                let html = '';
+                for (let i = 0; i < recycleBin.length; i++) {
+                    const item = recycleBin[i];
+                    html += `
+                        <div class="recycle-item">
+                            <span style="font-size:20px;">${item.icon || (item.isFolder ? '📁' : '📄')}</span>
+                            <div class="info">
+                                <div class="name">${escapeHtml(item.name)}</div>
+                                <div class="meta">${item.size} · ${item.deletedAt}</div>
+                            </div>
+                            <div class="actions">
+                                <button class="restore" data-id="${item.id}" title="恢复">↩️</button>
+                                <button class="del" data-id="${item.id}" title="永久删除">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                recycleList.innerHTML = html;
+
+                recycleList.querySelectorAll('.restore').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = parseInt(this.dataset.id);
+                        restoreFromRecycle(id);
+                    });
+                });
+                recycleList.querySelectorAll('.del').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = parseInt(this.dataset.id);
+                        if (confirm('确定永久删除此文件吗？')) {
+                            const item = recycleBin.find(r => r.id === id);
+                            if (item) {
+                                addRecord('delete', item.name, item.size, '永久删除');
+                            }
+                            recycleBin = recycleBin.filter(r => r.id !== id);
+                            renderRecycleList();
+                            showToast('🗑️ 已永久删除');
+                        }
+                    });
+                });
+            }
+
+            function restoreFromRecycle(id) {
+                const item = recycleBin.find(r => r.id === id);
+                if (!item) return;
+                const sizeMB = parseSizeToMB(item.size);
+                totalUsedMB += sizeMB;
+                const newFile = {
+                    id: ++fileIdCounter,
+                    name: item.name,
+                    size: item.size,
+                    icon: item.icon,
+                    date: item.date || new Date().toLocaleDateString('zh-CN'),
+                    path: item.path || '',
+                    isFolder: item.isFolder || false
+                };
+                files.push(newFile);
+                recycleBin = recycleBin.filter(r => r.id !== id);
+                addRecord('restore', item.name, item.size, '从回收站恢复');
+                updateStorageUI();
+                renderFiles();
+                renderRecycleList();
+                showToast(`↩️ 已恢复: ${item.name}`);
+            }
+
+            function emptyRecycleBin() {
+                if (recycleBin.length === 0) { showToast('回收站已是空的'); return; }
+                if (confirm('确定永久清空回收站所有文件吗？')) {
+                    recycleBin.forEach(item => {
+                        addRecord('delete', item.name, item.size, '清空回收站永久删除');
+                    });
+                    recycleBin = [];
+                    renderRecycleList();
+                    showToast('🗑️ 回收站已清空');
+                }
+            }
+
+            // ==================== 下载 ====================
+            function downloadFile(file) {
+                showToast(`📥 正在下载 ${file.name}...`);
+                const content = `📁 文件: ${file.name}\n📅 上传时间: ${file.date || '未知'}\n📦 文件大小: ${file.size}\n🔒 校验码: ${Array.from({length: 20}, () => Math.random().toString(16).slice(2, 3)).join('')}\n\n✅ 摸鱼网盘 · 极速下载`;
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 3000);
+                showToast(`✅ ${file.name} 下载完成`);
+            }
+
+            // ==================== 上传 ====================
+            function uploadFile(file, targetPath) {
+                if (isUploading) return;
+                isUploading = true;
+
+                const fileSizeBytes = file.size;
+                const fileSizeStr = formatFileSize(fileSizeBytes);
+                const fileSizeMB = fileSizeBytes / 1024 / 1024;
+
+                let baseTime = Math.min(8000, Math.max(800, fileSizeMB * 200));
+                const totalDuration = baseTime * (0.8 + Math.random() * 0.4);
+
+                const ext = file.name.includes('.') ? '.' + file.name.split('.').pop() : '';
+                const icon = getFileIcon(ext);
+                const date = new Date().toLocaleDateString('zh-CN');
+
+                uploadModal.classList.add('active');
+                modalProgress.style.width = '0%';
+                modalProgressText.textContent = '0%';
+                modalTitle.textContent = '正在上传';
+                modalSub.textContent = `📁 ${file.name} (${fileSizeStr})`;
+                modalIcon.textContent = '📤';
+
+                let progress = 0;
+                const startTime = Date.now();
+
+                const interval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    progress = Math.min((elapsed / totalDuration) * 100, 100);
+                    modalProgress.style.width = progress + '%';
+                    modalProgressText.textContent = Math.floor(progress) + '%';
+
+                    if (progress < 30) modalSub.textContent = `⏳ 传输中 ${file.name} (${Math.floor(progress)}%)`;
+                    else if (progress < 60) modalSub.textContent = `⚡ 传输中 ${file.name} (${Math.floor(progress)}%)`;
+                    else if (progress < 90) modalSub.textContent = `💾 即将完成 ${file.name} (${Math.floor(progress)}%)`;
+                    else if (progress < 100) modalSub.textContent = `✅ 写入中... (${Math.floor(progress)}%)`;
+
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        const path = targetPath || currentPath;
+                        const newFile = {
+                            id: ++fileIdCounter,
+                            name: file.name,
+                            size: fileSizeStr,
+                            icon: icon,
+                            date: date,
+                            path: path,
+                            isFolder: false
+                        };
+                        files.push(newFile);
+                        totalUsedMB += fileSizeMB;
+                        addRecord('upload', file.name, fileSizeStr, `上传到 ${path || '根目录'}`);
+                        updateStorageUI();
+                        renderFiles();
+
+                        modalIcon.textContent = '✅';
+                        modalTitle.textContent = '上传完成！';
+                        modalSub.textContent = `✅ ${file.name} 已上传成功`;
+
+                        setTimeout(() => {
+                            uploadModal.classList.remove('active');
+                            isUploading = false;
+                            showToast(`✅ ${file.name} 上传完成`);
+                        }, 500);
+                    }
+                }, 60);
+            }
+
+            // ==================== 分享功能 ====================
+            function openShareModal(file) {
+                currentShareFile = file;
+                shareTitle.textContent = `🔗 分享 ${file.name}`;
+                shareSub.textContent = `文件大小: ${file.size}`;
+                shareCodeInput.value = shareCodeCache;
+                shareLimitSelect.value = '0';
+                shareExpirySelect.value = '0';
+                generateShareLink();
+                shareModal.classList.add('active');
+            }
+
+            function generateShareLink() {
+                const code = shareCodeInput.value.trim() || 'moyu123';
+                shareCodeCache = code;
+                const limit = shareLimitSelect.value;
+                const expiry = shareExpirySelect.value;
+                const base = `https://moyu.com/share/${currentShareFile ? currentShareFile.id : 'all'}`;
+                const link = `${base}?code=${code}&limit=${limit}&expiry=${expiry}&t=${Date.now().toString(36)}`;
+                shareLink.textContent = link;
+                shareLink.dataset.link = link;
+            }
+
+            function closeShareModal() {
+                shareModal.classList.remove('active');
+                currentShareFile = null;
+            }
+
+            window.copyShareLink = function() {
+                const link = shareLink.dataset.link || shareLink.textContent;
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(link).then(() => {
+                        showToast('✅ 链接已复制到剪贴板');
+                    }).catch(() => {
+                        fallbackCopy(link);
+                    });
                 } else {
-                    registerPanel.classList.add('active');
-                    regError.style.display = 'none';
-                    regSuccess.style.display = 'none';
+                    fallbackCopy(link);
+                }
+            };
+
+            function fallbackCopy(text) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('✅ 链接已复制到剪贴板');
+            }
+
+            window.shareViaWechat = function() {
+                showToast('💬 请在微信中粘贴分享链接');
+                copyShareLink();
+            };
+
+            function shareAllFiles() {
+                const currentFiles = getCurrentFiles();
+                if (currentFiles.length === 0) {
+                    showToast('当前目录没有文件可分享');
+                    return;
+                }
+                currentShareFile = null;
+                shareTitle.textContent = `🔗 分享当前目录 (${currentFiles.length}个)`;
+                const names = currentFiles.map(f => f.name).join('、');
+                shareSub.textContent = `包含: ${names.length > 40 ? names.slice(0, 40) + '...' : names}`;
+                shareCodeInput.value = shareCodeCache;
+                shareLimitSelect.value = '0';
+                shareExpirySelect.value = '0';
+                generateShareLink();
+                shareModal.classList.add('active');
+            }
+
+            // ==================== VIP 会员 ====================
+            function renderVIP() {
+                const currentVip = VIP_CONFIG[vipLevel];
+                vipStatus.textContent = `当前等级：${currentVip.name} (${currentVip.storage}GB存储)`;
+
+                let html = '';
+                for (let i = 1; i < VIP_CONFIG.length; i++) {
+                    const v = VIP_CONFIG[i];
+                    const isOwned = vipLevel >= i;
+                    const isGold = i >= 6;
+                    const goldStar = isGold ? ' 🌟' : '';
+                    html += `
+                        <div class="vip-card" style="${isGold && isOwned ? 'border-color: #FFD700; box-shadow: 0 0 20px rgba(255,215,0,0.1);' : ''}">
+                            <div>
+                                <span class="vip-badge ${v.color}">${v.name}${goldStar}</span>
+                                <span style="float:right; font-weight:700; color:${isOwned ? '#2ecc71' : '#e67e22'};">
+                                    ${isOwned ? '✅ 已拥有' : `¥${v.price}`}
+                                </span>
+                            </div>
+                            <div class="vip-title">${v.name} · ${v.storage}GB 存储空间${isGold ? ' 👑' : ''}</div>
+                            <div class="vip-features">
+                                ${v.features.map(f => `<span>✓ ${f}</span>`).join('')}
+                            </div>
+                            ${!isOwned ? `<button class="btn-buy-vip" data-level="${i}">立即购买 ¥${v.price}</button>` : ''}
+                        </div>
+                    `;
+                }
+                vipList.innerHTML = html;
+
+                vipList.querySelectorAll('.btn-buy-vip').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const level = parseInt(this.dataset.level);
+                        buyVIP(level);
+                    });
+                });
+            }
+
+            function buyVIP(level) {
+                const v = VIP_CONFIG[level];
+                if (!v) return;
+                if (vipLevel >= level) {
+                    showToast(`您已拥有 ${v.name}`);
+                    return;
+                }
+                if (confirm(`确认购买 ${v.name} 会员？\n价格：¥${v.price}\n存储空间：${v.storage}GB\n${v.features.join('\n')}`)) {
+                    vipLevel = level;
+                    updateVIPBadge();
+                    updateVIPEffects();
+                    updateStorageUI();
+                    renderVIP();
+                    addRecord('folder', v.name, '—', `购买 ${v.name} 会员`);
+                    showToast(`🎉 恭喜成为 ${v.name} 会员！`);
+                    localStorage.setItem('moyu_vip', vipLevel);
+
+                    if (level >= 6) {
+                        setTimeout(() => {
+                            openChat();
+                            setTimeout(() => {
+                                const botDiv = document.createElement('div');
+                                botDiv.className = 'chat-msg bot';
+                                botDiv.textContent = '🤖 恭喜您成为尊贵的VIP会员！🎉 您现在可以享受专属客服服务了！有任何问题随时问我～';
+                                chatMessages.appendChild(botDiv);
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            }, 500);
+                        }, 1000);
+                    }
+                }
+            }
+
+            function updateVIPBadge() {
+                const v = VIP_CONFIG[vipLevel];
+                vipBadge.textContent = v.name;
+                if (vipLevel >= 6) {
+                    vipBadge.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                    vipBadge.style.color = '#5a3a00';
+                } else if (vipLevel > 0) {
+                    vipBadge.style.background = '#f39c12';
+                    vipBadge.style.color = 'white';
+                } else {
+                    vipBadge.style.background = '#e3f2fd';
+                    vipBadge.style.color = '#1565C0';
+                }
+            }
+
+            // ==================== 事件绑定 ====================
+
+            // 夜间模式
+            themeToggle.addEventListener('click', toggleTheme);
+
+            // 客服
+            serviceBtn.addEventListener('click', openChat);
+            chatCloseBtn.addEventListener('click', closeChat);
+            chatModal.addEventListener('click', function(e) {
+                if (e.target === this) closeChat();
+            });
+
+            // 分享
+            shareCodeInput.addEventListener('input', generateShareLink);
+            shareLimitSelect.addEventListener('change', generateShareLink);
+            shareExpirySelect.addEventListener('change', generateShareLink);
+            shareCloseBtn.addEventListener('click', closeShareModal);
+            shareModal.addEventListener('click', function(e) {
+                if (e.target === this) closeShareModal();
+            });
+
+            // 记录
+            recordBtn.addEventListener('click', function() {
+                renderRecords();
+                recordModal.classList.add('active');
+            });
+            recordCloseBtn.addEventListener('click', function() {
+                recordModal.classList.remove('active');
+            });
+            clearRecordBtn.addEventListener('click', function() {
+                if (operationRecords.length === 0) { showToast('暂无记录可清空'); return; }
+                if (confirm('确定清空所有操作记录吗？')) {
+                    operationRecords = [];
+                    saveRecords();
+                    renderRecords();
+                    showToast('📋 记录已清空');
                 }
             });
-        });
+            recordModal.addEventListener('click', function(e) {
+                if (e.target === this) recordModal.classList.remove('active');
+            });
 
-        // ==================== 登录 ====================
-        loginBtn.addEventListener('click', function() {
-            const username = loginUsername.value.trim();
-            const password = loginPassword.value.trim();
+            // VIP
+            vipBtn.addEventListener('click', function() {
+                renderVIP();
+                vipModal.classList.add('active');
+            });
+            vipCloseBtn.addEventListener('click', function() {
+                vipModal.classList.remove('active');
+            });
+            vipModal.addEventListener('click', function(e) {
+                if (e.target === this) vipModal.classList.remove('active');
+            });
 
-            if (!username || !password) {
-                loginError.textContent = '请填写用户名和密码';
-                loginError.style.display = 'block';
-                loginSuccess.style.display = 'none';
-                return;
-            }
+            // 上传
+            uploadBtn.addEventListener('click', function() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.style.display = 'none';
+                document.body.appendChild(input);
+                input.addEventListener('change', function(e) {
+                    const file = this.files[0];
+                    if (file) uploadFile(file, currentPath);
+                    document.body.removeChild(input);
+                });
+                input.click();
+            });
 
-            loginError.style.display = 'none';
-            loginSuccess.style.display = 'none';
-            this.disabled = true;
-            this.textContent = '登录中...';
-
-            setTimeout(() => {
-                const result = loginUser(username, password);
-                if (result.success) {
-                    // 保存登录数据
-                    saveLoginData(username, password);
-                    loginSuccess.textContent = '✅ 登录成功，正在跳转...';
-                    loginSuccess.style.display = 'block';
-                    redirectToMain(result.user);
-                } else {
-                    loginError.textContent = '❌ ' + result.error;
-                    loginError.style.display = 'block';
-                    this.disabled = false;
-                    this.textContent = '登录';
-                    showToast('❌ ' + result.error, 'error');
+            // 新建文件夹
+            newFolderBtn.addEventListener('click', function() {
+                const name = prompt('请输入新文件夹名称：', '新文件夹');
+                if (name && name.trim()) {
+                    const folderName = name.trim();
+                    const path = currentPath ? currentPath + '/' + folderName : folderName;
+                    files.push({
+                        id: ++fileIdCounter,
+                        name: folderName + '/',
+                        size: '—',
+                        icon: '📁',
+                        date: new Date().toLocaleDateString('zh-CN'),
+                        path: currentPath,
+                        isFolder: true
+                    });
+                    totalUsedMB += 0.01;
+                    addRecord('folder', folderName, '—', `创建文件夹`);
+                    updateStorageUI();
+                    renderFiles();
+                    showToast(`✅ 文件夹 "${folderName}" 已创建`);
                 }
-            }, 400);
-        });
+            });
 
-        loginPassword.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') loginBtn.click();
-        });
-        loginUsername.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') loginBtn.click();
-        });
+            shareAllBtn.addEventListener('click', shareAllFiles);
 
-        // ==================== 注册 ====================
-        registerBtn.addEventListener('click', function() {
-            const username = regUsername.value.trim();
-            const nickname = regNickname.value.trim() || username;
-            const password = regPassword.value;
-            const confirm = regConfirmPassword.value;
+            recycleBtn.addEventListener('click', function() {
+                renderRecycleList();
+                recycleSidebar.classList.add('open');
+            });
 
-            if (!username || username.length < 2 || username.length > 16) {
-                regError.textContent = '❌ 用户名长度应为 2-16 位';
-                regError.style.display = 'block';
-                regSuccess.style.display = 'none';
-                showToast('❌ 用户名长度应为 2-16 位', 'error');
-                return;
-            }
-            if (!/^[a-zA-Z0-9\u4e00-\u9fa5_]+$/.test(username)) {
-                regError.textContent = '❌ 用户名只能包含字母、数字、中文和下划线';
-                regError.style.display = 'block';
-                regSuccess.style.display = 'none';
-                showToast('❌ 用户名只能包含字母、数字、中文和下划线', 'error');
-                return;
-            }
-            if (password.length < 4) {
-                regError.textContent = '❌ 密码至少 4 位';
-                regError.style.display = 'block';
-                regSuccess.style.display = 'none';
-                showToast('❌ 密码至少 4 位', 'error');
-                return;
-            }
-            if (password !== confirm) {
-                regError.textContent = '❌ 两次密码输入不一致';
-                regError.style.display = 'block';
-                regSuccess.style.display = 'none';
-                showToast('❌ 两次密码输入不一致', 'error');
-                return;
-            }
+            closeRecycleBtn.addEventListener('click', function() {
+                recycleSidebar.classList.remove('open');
+            });
 
-            regError.style.display = 'none';
-            regSuccess.style.display = 'none';
-            this.disabled = true;
-            this.textContent = '注册中...';
+            emptyRecycleBtn.addEventListener('click', emptyRecycleBin);
 
-            setTimeout(() => {
-                const result = registerUser(username, password, nickname);
-                if (result.success) {
-                    regSuccess.textContent = '✅ 注册成功！请切换到登录页登录';
-                    regSuccess.style.display = 'block';
-                    showToast('✅ 注册成功！请登录', 'success');
-                    this.disabled = false;
-                    this.textContent = '注册';
-                    regUsername.value = '';
-                    regNickname.value = '';
-                    regPassword.value = '';
-                    regConfirmPassword.value = '';
-                    setTimeout(() => {
-                        document.querySelector('[data-tab="login"]').click();
-                        loginUsername.value = username;
-                    }, 500);
-                } else {
-                    regError.textContent = '❌ ' + result.error;
-                    regError.style.display = 'block';
-                    this.disabled = false;
-                    this.textContent = '注册';
-                    showToast('❌ ' + result.error, 'error');
+            sortBtn.addEventListener('click', function() {
+                sortAsc = !sortAsc;
+                const currentFiles = getCurrentFiles();
+                currentFiles.sort((a, b) => {
+                    if (a.isFolder && !b.isFolder) return -1;
+                    if (!a.isFolder && b.isFolder) return 1;
+                    if (sortAsc) return a.name.localeCompare(b.name);
+                    return b.name.localeCompare(a.name);
+                });
+                const ids = currentFiles.map(f => f.id);
+                const sortedFiles = [];
+                for (let id of ids) {
+                    const f = files.find(file => file.id === id);
+                    if (f) sortedFiles.push(f);
                 }
-            }, 400);
-        });
+                const otherFiles = files.filter(f => !ids.includes(f.id));
+                files = [...sortedFiles, ...otherFiles];
+                renderFiles();
+                showToast(`📋 已按名称${sortAsc ? '升序' : '降序'}排序`);
+            });
 
-        regConfirmPassword.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') registerBtn.click();
-        });
-        regPassword.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                regConfirmPassword.focus();
+            clearBtn.addEventListener('click', function() {
+                const currentFiles = getCurrentFiles();
+                if (currentFiles.length === 0) { showToast('当前目录没有文件'); return; }
+                if (confirm('⚠️ 确定要清空当前目录所有文件吗？可到回收站恢复')) {
+                    const toDelete = [...currentFiles];
+                    toDelete.forEach(f => {
+                        const sizeMB = parseSizeToMB(f.size);
+                        totalUsedMB = Math.max(0, totalUsedMB - sizeMB);
+                        recycleBin.unshift({
+                            id: ++recycleIdCounter,
+                            fileId: f.id,
+                            name: f.name,
+                            size: f.size,
+                            icon: f.icon,
+                            date: f.date,
+                            path: f.path || '',
+                            isFolder: f.isFolder || false,
+                            deletedAt: new Date().toLocaleString()
+                        });
+                        addRecord('delete', f.name, f.size, '批量删除');
+                    });
+                    files = files.filter(f => !toDelete.some(d => d.id === f.id));
+                    updateStorageUI();
+                    renderFiles();
+                    renderRecycleList();
+                    showToast('🗑️ 当前目录文件已移至回收站');
+                }
+            });
+
+            refreshBtn.addEventListener('click', function() {
+                showToast('⟳ 正在刷新存储状态...');
+                setTimeout(() => {
+                    updateStorageUI();
+                    showToast('✅ 刷新完成');
+                }, 600 + Math.random() * 400);
+            });
+
+            // 点击空白关闭回收站
+            document.addEventListener('click', function(e) {
+                if (recycleSidebar.classList.contains('open')) {
+                    if (!recycleSidebar.contains(e.target) && e.target !== recycleBtn && !recycleBtn.contains(e.target)) {
+                        recycleSidebar.classList.remove('open');
+                    }
+                }
+            });
+
+            // ==================== 初始化 ====================
+            function init() {
+                loadTheme();
+                loadRecords();
+
+                const savedVip = localStorage.getItem('moyu_vip');
+                if (savedVip) vipLevel = parseInt(savedVip);
+                updateVIPBadge();
+                updateVIPEffects();
+
+                const sampleFiles = [
+                    { name: '工作汇报.docx', size: '1.2 MB', icon: '📄', date: '2025-06-28', path: '' },
+                    { name: '项目计划表.xlsx', size: '856 KB', icon: '📊', date: '2025-06-27', path: '' },
+                    { name: '摸鱼指南.pdf', size: '3.4 MB', icon: '📕', date: '2025-06-26', path: '' },
+                ];
+                sampleFiles.forEach(f => {
+                    files.push({
+                        id: ++fileIdCounter,
+                        name: f.name,
+                        size: f.size,
+                        icon: f.icon,
+                        date: f.date,
+                        path: f.path,
+                        isFolder: false
+                    });
+                    totalUsedMB += parseSizeToMB(f.size);
+                    addRecord('upload', f.name, f.size, '初始化示例文件');
+                });
+
+                const sampleFolders = ['工作文档', '照片备份', '学习资料'];
+                sampleFolders.forEach(name => {
+                    files.push({
+                        id: ++fileIdCounter,
+                        name: name + '/',
+                        size: '—',
+                        icon: '📁',
+                        date: new Date().toLocaleDateString('zh-CN'),
+                        path: '',
+                        isFolder: true
+                    });
+                    addRecord('folder', name, '—', '初始化示例文件夹');
+                });
+
+                updateStorageUI();
+                renderFiles();
+                renderRecycleList();
+                updateBreadcrumb();
             }
-        });
 
-        // ==================== 简单看看 ====================
-        quickViewBtn.addEventListener('click', function() {
-            showToast('👀 正在进入预览模式...', 'success');
-            setTimeout(() => {
-                window.location.href = QUICK_VIEW_URL;
-            }, 400);
-        });
+            init();
+            console.log('☁️ 摸鱼网盘 v6.0 · 操作记录功能已上线');
+        })();
+    </script>
 
-        // ==================== 初始化 ====================
-        // 加载注册用户数据
-        loadRegisteredUsers();
-        // 加载保存的登录数据
-        loadSavedLogin();
-
-        // 控制台提示
-        console.log('🐟 摸鱼商超登录页面');
-        console.log('📝 测试账号:');
-        console.log('   moyu / 123456');
-        console.log('   xiao_miao / 123456');
-        console.log('   wang_cai / 123456');
-        console.log('   li_gou / 123456');
-        console.log('   hua_jie / 123456');
-        console.log('   bohe / 123456');
-        console.log('👀 或点击"简单看看"直接预览');
-        console.log('💾 注册用户数据已持久化保存到 localStorage');
-        console.log('ℹ️ 需要手动点击登录按钮进入');
-    })();
-</script>
 </body>
 </html>
