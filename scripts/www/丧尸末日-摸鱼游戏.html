@@ -1,0 +1,4704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>死寂地带 · 手机版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #070707; touch-action: manipulation;
+    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Consolas', 'Courier New', monospace;
+    position: fixed; top: 0; left: 0;
+  }
+  body { color: #b8b0a0; }
+  #gameContainer {
+    position: fixed; inset: 0;
+    display: flex; justify-content: center; align-items: center;
+    background: radial-gradient(ellipse at center, #1a1510 0%, #070707 70%);
+  }
+  canvas {
+    display: block; width: 100vw; height: 100vh;
+    image-rendering: auto; background: #1a1612; touch-action: manipulation;
+  }
+  
+  #vignette {
+    position: absolute; inset: 0; pointer-events: none; z-index: 5;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.75) 100%);
+  }
+  #damageOverlay {
+    position: absolute; inset: 0; pointer-events: none; z-index: 6;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(139,0,0,0.4) 100%);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  #nightOverlay {
+    position: absolute; inset: 0; pointer-events: none; z-index: 4;
+    background: rgba(10, 15, 40, 0.45);
+    opacity: 0;
+    transition: opacity 2s;
+  }
+  #bloodMoonOverlay {
+    position: absolute; inset: 0; pointer-events: none; z-index: 4;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(139,0,0,0.35) 100%);
+    opacity: 0;
+    transition: opacity 2s;
+    animation: bloodPulse 3s infinite;
+  }
+  @keyframes bloodPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.9; }
+  }
+  
+  #hudLeft {
+    position: absolute; top: 8px; left: 8px; z-index: 10;
+    font-size: 10px; text-shadow: 1px 1px 0 #000;
+  }
+  .statusBar {
+    width: 170px; height: 14px;
+    background: rgba(0,0,0,0.6); border: 1px solid #3a3020;
+    margin-bottom: 5px; position: relative;
+  }
+  .barFill { height: 100%; transition: width 0.15s; }
+  .hpFill { background: linear-gradient(90deg, #5c1010, #c02020); }
+  .staminaFill { background: linear-gradient(90deg, #1a4a1a, #3a8a3a); }
+  .engineFill { background: linear-gradient(90deg, #3a2a10, #c89030); }
+  .gateFill { background: linear-gradient(90deg, #4a3a10, #d4a040); }
+  .barText {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 9px; color: #fff; font-weight: bold; letter-spacing: 1px;
+  }
+  
+  #hudRight {
+    position: absolute; top: 20px; right: 20px; z-index: 10;
+    text-align: right; font-size: 11px;
+    text-shadow: 2px 2px 0 #000;
+    background: rgba(0,0,0,0.5); border: 1px solid #332a1a;
+    padding: 10px 14px; min-width: 140px;
+  }
+  .resLine { margin-bottom: 3px; }
+  .resLine span { color: #d4b860; font-weight: bold; margin-left: 6px; }
+  .waveInfo {
+    margin-top: 6px; padding-top: 6px;
+    border-top: 1px solid #332a1a;
+    color: #c04040; font-weight: bold; letter-spacing: 2px;
+  }
+  .dayNightInfo {
+    margin-top: 6px; padding-top: 6px;
+    border-top: 1px solid #332a1a;
+    font-size: 10px;
+  }
+  .dayNightInfo.day { color: #ffd860; }
+  .dayNightInfo.night { color: #6080ff; }
+  .dayNightInfo.bloodmoon { color: #ff2020; animation: bloodText 1s infinite; }
+  @keyframes bloodText {
+    0%, 100% { color: #ff2020; }
+    50% { color: #ff8080; }
+  }
+  
+  #vipBadge {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    padding: 4px 18px; font-size: 11px; font-weight: bold;
+    letter-spacing: 3px; z-index: 10; display: none;
+  }
+  .badge-vip { background: linear-gradient(90deg, #1a2a5a, #2a4a8a); color: #a0c0ff; border: 1px solid #3a5a9a; }
+  .badge-svip { background: linear-gradient(90deg, #5a4a10, #8a7a30); color: #ffe080; border: 1px solid #b09040; box-shadow: 0 0 20px rgba(255,200,80,0.2); }
+  .badge-svipplus { 
+    background: linear-gradient(90deg, #6a106a, #aa30aa); 
+    color: #ffb0ff; 
+    border: 1px solid #d060d0; 
+    box-shadow: 0 0 25px rgba(255,100,255,0.3);
+    animation: badgeGlow 2s infinite;
+  }
+  @keyframes badgeGlow {
+    0%, 100% { box-shadow: 0 0 25px rgba(255,100,255,0.3); }
+    50% { box-shadow: 0 0 40px rgba(255,100,255,0.6); }
+  }
+  
+  #waveAnnounce {
+    position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 48px; color: #c02020; font-weight: bold;
+    letter-spacing: 8px; text-shadow: 4px 4px 0 #000, 0 0 30px rgba(192,32,32,0.5);
+    opacity: 0; pointer-events: none; z-index: 20;
+  }
+  #dayNightAnnounce {
+    position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 36px; font-weight: bold;
+    letter-spacing: 6px; text-shadow: 3px 3px 0 #000;
+    opacity: 0; pointer-events: none; z-index: 20;
+  }
+  #bossAnnounce {
+    position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 42px; color: #ff2020; font-weight: bold;
+    letter-spacing: 10px; text-shadow: 4px 4px 0 #000, 0 0 40px rgba(255,0,0,0.7);
+    opacity: 0; pointer-events: none; z-index: 20;
+    animation: bossShake 0.5s infinite;
+  }
+  @keyframes bossShake {
+    0%, 100% { transform: translate(-50%, -50%); }
+    25% { transform: translate(-52%, -48%); }
+    75% { transform: translate(-48%, -52%); }
+  }
+  
+  #weaponBar {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 5px; z-index: 10;
+  }
+  .weaponSlot {
+    width: 54px; height: 40px;
+    background: rgba(0,0,0,0.6); border: 1px solid #3a3020;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    font-size: 9px; color: #666; cursor: pointer;
+    transition: all 0.2s; position: relative;
+  }
+  .weaponSlot.active { border-color: #d4b860; color: #d4b860; background: rgba(212,184,96,0.1); }
+  .weaponSlot.locked { opacity: 0.3; cursor: not-allowed; }
+  .weaponSlot .wIcon { font-size: 16px; }
+  .weaponSlot .wKey { position: absolute; top: 2px; left: 4px; font-size: 8px; color: #555; }
+  
+  #bottomTips {
+    position: absolute; bottom: 75px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: #555; z-index: 10;
+    text-shadow: 1px 1px 0 #000; letter-spacing: 1px;
+  }
+  #interactPrompt {
+    position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+    padding: 5px 14px; background: rgba(0,0,0,0.7);
+    border: 1px solid #5a4a2a; color: #d4b860;
+    font-size: 11px; z-index: 10; display: none; letter-spacing: 1px;
+  }
+  
+  #sideBtns {
+    position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 7px; z-index: 10;
+  }
+  .sideBtn {
+    width: 40px; height: 40px;
+    background: rgba(0,0,0,0.6); border: 1px solid #3a3020;
+    color: #aaa; cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .sideBtn:hover { border-color: #d4b860; color: #d4b860; background: rgba(212,184,96,0.1); }
+  .sideBtn.vip { border-color: #8a7020; color: #ffd060; }
+  
+  .panel {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(10,8,6,0.96); border: 1px solid #443a2a;
+    z-index: 30; display: none;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    max-height: 85vh; overflow-y: auto;
+  }
+  .panel h3 {
+    color: #d4b860; padding: 12px 18px;
+    border-bottom: 1px solid #332a1a;
+    letter-spacing: 2px; font-size: 14px;
+  }
+  .panelContent { padding: 14px 18px; }
+  .closeX {
+    position: absolute; top: 8px; right: 12px;
+    color: #666; cursor: pointer; font-size: 16px;
+  }
+  .closeX:hover { color: #fff; }
+  
+  .upgradeRow {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 10px; background: rgba(255,255,255,0.02);
+    border: 1px solid #2a241a; margin-bottom: 5px;
+  }
+  .upgradeRow:hover { border-color: #5a4a2a; }
+  .upInfo .upName { color: #d0c8b8; font-size: 12px; font-weight: bold; }
+  .upInfo .upDesc { font-size: 10px; color: #777; margin-top: 2px; }
+  .upCost { color: #d4b860; font-size: 11px; margin-right: 8px; }
+  .upBtn {
+    padding: 4px 12px; background: #3a3020; border: 1px solid #5a4a2a;
+    color: #d4b860; cursor: pointer; font-family: inherit; font-size: 10px;
+  }
+  .upBtn:hover { background: #5a4a2a; }
+  .upBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+  
+  .buildGrid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  }
+  .buildItem {
+    padding: 10px; background: rgba(255,255,255,0.02);
+    border: 1px solid #2a241a; cursor: pointer;
+    text-align: center; transition: all 0.2s;
+  }
+  .buildItem:hover { border-color: #d4b860; background: rgba(212,184,96,0.05); }
+  .buildItem .bIcon { font-size: 24px; margin-bottom: 4px; }
+  .buildItem .bName { font-size: 11px; color: #ccc; font-weight: bold; }
+  .buildItem .bDesc { font-size: 9px; color: #777; margin: 3px 0; }
+  .buildItem .bPrice { font-size: 10px; color: #d4b860; }
+  
+  .weaponUpgradeCard {
+    padding: 10px; background: rgba(255,255,255,0.02);
+    border: 1px solid #2a241a; margin-bottom: 6px;
+  }
+  .wuHeader {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .wuName { color: #d4b860; font-weight: bold; font-size: 12px; }
+  .wuLevel { color: #777; font-size: 10px; }
+  .wuStats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
+    font-size: 9px; color: #888; margin-bottom: 6px;
+  }
+  .wuBtns { display: flex; gap: 4px; flex-wrap: wrap; }
+  .wuBtn {
+    flex: 1; min-width: 70px;
+    padding: 3px 6px; font-size: 9px;
+    background: #2a241a; border: 1px solid #3a3020;
+    color: #aaa; cursor: pointer; font-family: inherit;
+  }
+  .wuBtn:hover { border-color: #d4b860; color: #d4b860; }
+  .wuBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+  
+  .gachaBox { text-align: center; padding: 20px; }
+  .gachaDisplay {
+    height: 80px; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 40px; margin-bottom: 15px;
+    background: rgba(0,0,0,0.3); border: 1px solid #3a3020;
+    border-radius: 4px;
+  }
+  .gachaBtn {
+    padding: 10px 30px;
+    background: linear-gradient(135deg, #6a5a20, #8a7a30);
+    border: 1px solid #b09040;
+    color: #ffe080; cursor: pointer;
+    font-family: inherit; font-weight: bold;
+    letter-spacing: 2px;
+  }
+  .gachaBtn:hover { box-shadow: 0 0 20px rgba(255,200,80,0.3); }
+  .gachaInfo { font-size: 10px; color: #777; margin-top: 10px; }
+  
+  .survivorList { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .survivorCard {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px; background: rgba(255,255,255,0.02);
+    border: 1px solid #2a241a;
+  }
+  .survivorCard .sAvatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #3a5a2a; display: flex;
+    align-items: center; justify-content: center; font-size: 16px;
+  }
+  .survivorCard.elite .sAvatar { background: #6a2a8a; }
+  .survivorCard.mercenary .sAvatar { background: #8a6a2a; }
+  .survivorCard .sInfo { flex: 1; font-size: 11px; }
+  .survivorCard .sName { color: #d0c8b8; font-weight: bold; }
+  .survivorCard.elite .sName { color: #e0a0ff; }
+  .survivorCard.mercenary .sName { color: #ffd080; }
+  .survivorCard .sStats { color: #777; font-size: 9px; margin-top: 2px; }
+  .survivorCard .sHpBar { width: 100%; height: 4px; background: #200; margin-top: 3px; }
+  .survivorCard .sHpFill { height: 100%; background: #c02020; }
+  .recruitBtn {
+    width: 100%; padding: 6px; margin-top: 8px;
+    background: #2a3a2a; border: 1px solid #3a5a3a;
+    color: #6a9a6a; cursor: pointer; font-family: inherit; font-size: 11px;
+  }
+  .recruitBtn:hover { background: #3a5a3a; color: #8aba8a; }
+  .recruitBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .hireMercBtn {
+    width: 100%; padding: 6px; margin-top: 5px;
+    background: #3a3a1a; border: 1px solid #6a6a2a;
+    color: #d4d46a; cursor: pointer; font-family: inherit; font-size: 11px;
+  }
+  .hireMercBtn:hover { background: #5a5a2a; color: #ffff8a; }
+  
+  .searchRooms { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .searchRoom {
+    padding: 15px; background: rgba(255,255,255,0.02);
+    border: 1px solid #2a241a; text-align: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .searchRoom:hover { border-color: #d4b860; background: rgba(212,184,96,0.05); }
+  .searchRoom.searched { opacity: 0.4; cursor: not-allowed; }
+  .searchRoom .rIcon { font-size: 28px; margin-bottom: 4px; }
+  .searchRoom .rName { font-size: 12px; color: #ccc; }
+  
+  .shopGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .shopItem {
+    padding: 8px; background: rgba(255,255,255,0.02);
+    border: 1px solid #2a241a; cursor: pointer; transition: all 0.2s;
+  }
+  .shopItem:hover { border-color: #d4b860; background: rgba(212,184,96,0.05); }
+  .shopItem.locked { opacity: 0.4; cursor: not-allowed; }
+  .shopItem .sName { color: #fff; font-size: 11px; font-weight: bold; }
+  .shopItem .sDesc { font-size: 9px; color: #777; margin: 3px 0; }
+  .shopItem .sPrice { color: #d4b860; font-size: 10px; }
+  .shopItem .sTag {
+    font-size: 8px; padding: 1px 5px; float: right;
+    background: #c02020; color: #fff;
+  }
+  .shopItem .sTag.vipTag { background: #2a4a8a; }
+  .shopItem .sTag.svipTag { background: #8a7020; color: #000; }
+  .shopItem .sTag.svipplusTag { background: #8a2a8a; }
+  
+  #vipPanel {
+    width: 780px; background: linear-gradient(180deg, #1a140a, #0a0806);
+    border-color: #6a5a2a;
+  }
+  #vipPanel h3 { text-align: center; color: #ffd060; border: none; text-shadow: 0 0 20px rgba(255,208,96,0.3); }
+  .vipCards { display: flex; gap: 8px; padding: 0 18px 18px; }
+  .vipCard {
+    flex: 1; padding: 14px 8px; border: 1px solid #333;
+    text-align: center; background: rgba(0,0,0,0.3);
+    transition: all 0.3s;
+  }
+  .vipCard:hover { transform: translateY(-2px); }
+  .vipCard.vip { border-color: #3a5a9a; }
+  .vipCard.svip { border-color: #b09040; box-shadow: 0 0 25px rgba(255,200,80,0.12); }
+  .vipCard.svipplus { 
+    border-color: #d060d0; 
+    box-shadow: 0 0 30px rgba(255,100,255,0.2);
+    background: linear-gradient(180deg, rgba(80,20,80,0.4), rgba(0,0,0,0.3));
+  }
+  .vipCard .vTitle { font-size: 12px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px; }
+  .vipCard.vip .vTitle { color: #6a8aca; }
+  .vipCard.svip .vTitle { color: #ffd060; }
+  .vipCard.svipplus .vTitle { color: #ff80ff; }
+  .vipCard .vPrice { font-size: 20px; color: #ff8020; font-weight: bold; margin: 8px 0; }
+  .vipCard .vPrice small { font-size: 10px; color: #555; text-decoration: line-through; margin-right: 5px; font-weight: normal; }
+  .vipCard ul { list-style: none; text-align: left; font-size: 9px; line-height: 1.7; color: #999; padding: 0 5px; height: 200px; overflow-y: auto; }
+  .vipCard ul li::before { content: "▸ "; color: #d4b860; }
+  .vipCard.svipplus ul li::before { color: #ff80ff; }
+  .buyVipBtn {
+    margin-top: 10px; width: 100%; padding: 7px; border: none;
+    color: #fff; font-family: inherit; font-weight: bold;
+    cursor: pointer; letter-spacing: 2px; font-size: 11px;
+  }
+  .vip .buyVipBtn { background: linear-gradient(90deg, #1a3a7a, #3a6aba); }
+  .svip .buyVipBtn { background: linear-gradient(90deg, #8a6a10, #d4a030); color: #000; }
+  .svipplus .buyVipBtn { background: linear-gradient(90deg, #7a1a7a, #d040d0); }
+  
+  #startScreen {
+    position: absolute; inset: 0; background: #000;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center; z-index: 100;
+  }
+  #startScreen h1 {
+    font-size: 64px; color: #8b1010; letter-spacing: 10px;
+    margin-bottom: 8px; text-shadow: 0 0 40px rgba(139,16,16,0.6);
+    animation: titleFlicker 4s infinite;
+  }
+  @keyframes titleFlicker {
+    0%, 100% { opacity: 1; }
+    47% { opacity: 1; } 50% { opacity: 0.3; } 53% { opacity: 1; }
+    80% { opacity: 0.8; }
+  }
+  #startScreen .subtitle { color: #555; letter-spacing: 5px; margin-bottom: 40px; font-size: 13px; }
+  .startBtn {
+    padding: 12px 50px; font-size: 15px;
+    background: #5c1010; border: 1px solid #8b2020;
+    color: #d0a0a0; cursor: pointer;
+    font-family: inherit; letter-spacing: 3px; transition: all 0.3s;
+  }
+  .startBtn:hover { background: #8b1010; box-shadow: 0 0 25px rgba(139,16,16,0.5); color: #fff; }
+  .controls {
+    margin-top: 40px; color: #444; font-size: 10px;
+    text-align: center; line-height: 2; letter-spacing: 1px;
+  }
+  
+  #gameOver {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.9);
+    display: none; flex-direction: column;
+    justify-content: center; align-items: center; z-index: 60;
+  }
+  #gameOver h2 { font-size: 56px; color: #8b1010; letter-spacing: 8px; margin-bottom: 18px; }
+  #gameOver .stats { color: #888; line-height: 2; text-align: center; margin-bottom: 25px; font-size: 12px; }
+  #gameOver .stats strong { color: #d4b860; }
+  
+  #toast {
+    position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
+    padding: 6px 18px; background: rgba(0,0,0,0.85);
+    border: 1px solid #443a2a; color: #d0c8b8;
+    font-size: 11px; opacity: 0; transition: opacity 0.25s;
+    z-index: 50; pointer-events: none; letter-spacing: 1px;
+  }
+  
+  #musicToggle {
+    position: absolute; bottom: 20px; right: 20px; z-index: 10;
+    width: 36px; height: 36px;
+    background: rgba(0,0,0,0.6); border: 1px solid #3a3020;
+    color: #aaa; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #musicToggle:hover { border-color: #d4b860; color: #d4b860; }
+  /* 手机虚拟控件 */
+  #mobileControls { position:fixed; inset:0; pointer-events:none; z-index:50; }
+  #joystickZone { position:absolute; bottom:30px; left:20px; width:140px; height:140px; pointer-events:auto; }
+  #joystickBase { position:absolute; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,0.12); border:2px solid rgba(255,255,255,0.3); top:50%; left:50%; transform:translate(-50%,-50%); }
+  #joystickThumb { position:absolute; width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,0.4); top:50%; left:50%; transform:translate(-50%,-50%); transition:none; }
+  #actionBtns { position:absolute; bottom:20px; right:10px; display:flex; flex-direction:column; gap:8px; pointer-events:auto; }
+  .actBtn { width:70px; height:70px; border-radius:50%; border:2px solid rgba(255,255,255,0.4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; color:#fff; text-shadow:0 1px 2px #000; background:rgba(0,0,0,0.5); -webkit-tap-highlight-color:transparent; user-select:none; }
+  .btnShoot { background:rgba(200,30,30,0.5); border-color:rgba(255,80,80,0.6); }
+  .btnReload { background:rgba(30,80,200,0.5); border-color:rgba(80,120,255,0.6); }
+  .btnSwitch { background:rgba(30,150,30,0.5); border-color:rgba(80,200,80,0.6); }
+  .btnSkill { background:rgba(200,150,30,0.5); border-color:rgba(255,200,80,0.6); }
+  #topBtns { position:absolute; top:8px; right:8px; display:flex; gap:6px; pointer-events:auto; z-index:51; }
+  .miniBtn { width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.3); color:#fff; font-size:16px; display:flex; align-items:center; justify-content:center; }
+  #desktopOnly { display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="gameContainer">
+  <canvas id="gameCanvas" width="1024" height="680"></canvas>
+  <div id="vignette"></div>
+
+  <!-- 手机虚拟控件 -->
+  <div id="mobileControls">
+    <div id="joystickZone">
+      <div id="joystickBase"></div>
+      <div id="joystickThumb"></div>
+    </div>
+    <div id="actionBtns">
+      <div class="actBtn btnShoot" id="btnShoot">🔫<br>射击</div>
+      <div class="actBtn btnReload" id="btnReload">🔄<br>换弹</div>
+      <div class="actBtn btnSwitch" id="btnSwitch">🔃<br>换枪</div>
+      <div class="actBtn btnSkill" id="btnSkill">💣<br>技能</div>
+    </div>
+    <div id="topBtns">
+      <div class="miniBtn" id="btnPause" onclick="togglePause()">⏯</div>
+      <div class="miniBtn" id="btnMusic" onclick="toggleMusic()">🎵</div>
+      <div class="miniBtn" id="btnSettings" onclick="toggleSettings()">⚙</div>
+    </div>
+  </div>
+  <div id="damageOverlay"></div>
+  <div id="nightOverlay"></div>
+  <div id="bloodMoonOverlay"></div>
+  
+  <div id="hudLeft">
+    <div class="statusBar">
+      <div class="barFill hpFill" id="hpBar" style="width:100%"></div>
+      <div class="barText" id="hpText">100 HP</div>
+    </div>
+    <div class="statusBar">
+      <div class="barFill staminaFill" id="staminaBar" style="width:100%"></div>
+      <div class="barText" id="staminaText">体力 100</div>
+    </div>
+    <div class="statusBar">
+      <div class="barFill engineFill" id="engineBar" style="width:100%"></div>
+      <div class="barText" id="engineText">发动机 100%</div>
+    </div>
+    <div class="statusBar">
+      <div class="barFill gateFill" id="gateBar" style="width:100%"></div>
+      <div class="barText" id="gateText">大门 100%</div>
+    </div>
+  </div>
+  
+  <div id="hudRight">
+    <div class="resLine">🥫 食物 <span id="foodRes">20</span></div>
+    <div class="resLine">🔧 零件 <span id="partsRes">20</span></div>
+    <div class="resLine">🧪 药品 <span id="medsRes">5</span></div>
+    <div class="resLine">📦 弹药 <span id="ammoRes">100</span></div>
+    <div class="resLine">💰 金币 <span id="goldRes">0</span></div>
+    <div class="resLine">💎 水晶 <span id="crystalRes">0</span></div>
+    <div class="waveInfo">🏰 <span id="levelName">废土堡垒</span> · 第 <span id="waveRes">1</span> 波</div>
+    <div class="dayNightInfo day" id="dayNightInfo">☀ 白天 · 剩余 <span id="dayTime">20</span>s</div>
+  </div>
+  
+  <div id="vipBadge"></div>
+  <div id="waveAnnounce"></div>
+  <div id="dayNightAnnounce"></div>
+  <div id="bossAnnounce">⚠ BOSS 出现 ⚠</div>
+  <div id="interactPrompt">[E] 互动</div>
+  
+  <div id="weaponBar" style="display:none"></div>
+  <div id="bottomTips">WASD移动 · 鼠标射击 · Shift冲刺 · R换弹 · E互动 · H基地 · G建筑 · K枪械 · L抽奖 · M雇佣兵</div>
+  
+  <div id="sideBtns" style="display:none">
+    <div class="sideBtn" onclick="toggleBasePanel()" title="基地 [H]">🏠</div>
+    <div class="sideBtn" onclick="toggleBuildPanel()" title="建筑 [G]">🏗️</div>
+    <div class="sideBtn" onclick="toggleWeaponUpgrade()" title="枪械 [K]">🔫</div>
+    <div class="sideBtn" onclick="toggleGacha()" title="抽奖 [L]">🎰</div>
+    <div class="sideBtn" onclick="toggleSurvivors()" title="幸存者 [P]">👥</div>
+    <div class="sideBtn" onclick="toggleMercenaries()" title="雇佣兵 [M]">⚔️</div>
+    <div class="sideBtn" onclick="toggleShop()" title="商店 [B]">🛒</div>
+    <div class="sideBtn vip" onclick="openVip()" title="会员">👑</div>
+    <div class="sideBtn" onclick="toggleSettings()" title="设置/修改器 [F1]" style="border-color:#5a4a2a;">⚙️</div>
+  </div>
+  
+  <!-- 基地面板 -->
+  <div class="panel" id="basePanel" style="width:480px;">
+    <span class="closeX" onclick="toggleBasePanel()">×</span>
+    <h3>▸ 堡垒升级</h3>
+    <div class="panelContent">
+      <div id="baseUpgrades"></div>
+      <h3 style="border-top:1px solid #332a1a; margin-top:10px; padding-top:10px;">▸ 炮台建造</h3>
+      <div class="buildGrid" id="turretBuild"></div>
+    </div>
+  </div>
+  
+  <!-- 建筑面板 -->
+  <div class="panel" id="buildPanel" style="width:460px;">
+    <span class="closeX" onclick="toggleBuildPanel()">×</span>
+    <h3>▸ 建筑系统</h3>
+    <div class="panelContent">
+      <div class="buildGrid" id="buildGrid"></div>
+      <div style="font-size:9px; color:#666; margin-top:8px; text-align:center;">
+        点击购买后自动建造在基地周围
+      </div>
+    </div>
+  </div>
+  
+  <!-- 枪械升级 -->
+  <div class="panel" id="weaponUpgradePanel" style="width:500px;">
+    <span class="closeX" onclick="toggleWeaponUpgrade()">×</span>
+    <h3>▸ 枪械升级</h3>
+    <div class="panelContent">
+      <div id="weaponUpgradeList"></div>
+    </div>
+  </div>
+  
+  <!-- 抽奖 -->
+  <div class="panel" id="gachaPanel" style="width:360px;">
+    <span class="closeX" onclick="toggleGacha()">×</span>
+    <h3>▸ 神秘军火箱</h3>
+    <div class="panelContent">
+      <div class="gachaBox">
+        <div class="gachaDisplay" id="gachaDisplay">❓</div>
+        <button class="gachaBtn" onclick="doGacha()">抽取一次 (50金币)</button>
+        <div class="gachaInfo">
+          概率获得：隐藏武器 · 大量资源 · 稀有道具<br>
+          SVIP抽取价格-20%，稀有概率翻倍
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 幸存者 -->
+  <div class="panel" id="survivorPanel" style="width:420px;">
+    <span class="closeX" onclick="toggleSurvivors()">×</span>
+    <h3>▸ 幸存者小队</h3>
+    <div class="panelContent">
+      <div class="survivorList" id="survivorList"></div>
+      <button class="recruitBtn" id="recruitBtn" onclick="recruitSurvivor()">
+        🔍 招募幸存者 (消耗 10 食物)
+      </button>
+    </div>
+  </div>
+  
+  <!-- 雇佣兵 -->
+  <div class="panel" id="mercenaryPanel" style="width:420px;">
+    <span class="closeX" onclick="toggleMercenaries()">×</span>
+    <h3>▸ 雇佣兵营地</h3>
+    <div class="panelContent">
+      <div style="font-size:11px; color:#aaa; margin-bottom:10px;">
+        雇佣兵会跟随玩家外出作战，战斗力更强
+      </div>
+      <div class="survivorList" id="mercenaryList"></div>
+      <button class="hireMercBtn" id="hireMercBtn" onclick="hireMercenary()">
+        ⚔️ 雇佣精英战士 (200金币/天)
+      </button>
+      <div style="font-size:9px; color:#666; margin-top:5px; text-align:center;">
+        最多雇佣 3 名雇佣兵，跟随你出生入死
+      </div>
+    </div>
+  </div>
+  
+  <!-- 搜索 -->
+  <div class="panel" id="searchPanel" style="width:400px;">
+    <span class="closeX" onclick="closeSearch()">×</span>
+    <h3>▸ 废弃房屋搜索</h3>
+    <div class="panelContent">
+      <div class="searchRooms" id="searchRooms"></div>
+    </div>
+  </div>
+  
+  <!-- 商店 -->
+  <div class="panel" id="shopPanel" style="width:520px;">
+    <span class="closeX" onclick="toggleShop()">×</span>
+    <h3>▸ 军火商</h3>
+    <div class="panelContent">
+      <h4 style="color:#d4b860; margin-bottom:8px; font-size:12px;">武器</h4>
+      <div class="shopGrid" id="shopWeapons"></div>
+      <h4 style="color:#d4b860; margin:12px 0 8px; font-size:12px;">道具</h4>
+      <div class="shopGrid" id="shopItems"></div>
+    </div>
+  </div>
+  
+  <!-- 会员 -->
+  <div class="panel" id="vipPanel">
+    <span class="closeX" onclick="closeVip()">×</span>
+    <h3>✦ 废土特权 ✦</h3>
+    <div class="vipCards">
+      <div class="vipCard vip">
+        <div class="vTitle">VIP 精英</div>
+        <div class="vPrice"><small>¥59</small>¥39.9</div>
+        <ul>
+          <li>初始金币 +500</li>
+          <li>资源获取 +50%</li>
+          <li>击杀金币 +30%</li>
+          <li>解锁冲锋枪/步枪</li>
+          <li>体力上限 +50</li>
+          <li>背包容量 +12格</li>
+          <li>复活次数 +3</li>
+          <li>自动拾取物资</li>
+          <li>幸存者上限 +3</li>
+          <li>抽奖概率+10%</li>
+        </ul>
+        <button class="buyVipBtn" onclick="buyVip('vip')">立即开通</button>
+      </div>
+      <div class="vipCard svip">
+        <div class="vTitle">SVIP 主宰</div>
+        <div class="vPrice"><small>¥129</small>¥79.9</div>
+        <ul>
+          <li>包含全部VIP权益</li>
+          <li>初始金币 +1200</li>
+          <li>资源获取 +120%</li>
+          <li>击杀金币 +80%</li>
+          <li>解锁全部武器</li>
+          <li>生命上限 +100</li>
+          <li>炮台伤害 +60%</li>
+          <li>复活次数 +8</li>
+          <li>基地自动修复</li>
+          <li>幸存者上限 +6</li>
+          <li>专属金色铭牌</li>
+          <li>抽奖8折+稀有翻倍</li>
+          <li>隐藏武器提前解锁</li>
+          <li>建筑上限翻倍</li>
+        </ul>
+        <button class="buyVipBtn" onclick="buyVip('svip')">立即开通</button>
+      </div>
+      <div class="vipCard svipplus">
+        <div class="vTitle">SVIP+ 至尊</div>
+        <div class="vPrice"><small>¥1299</small>¥999</div>
+        <ul>
+          <li>包含全部SVIP权益</li>
+          <li>初始金币 +3000</li>
+          <li>食物 x200 零件 x500</li>
+          <li>弹药 x700 药品 x100</li>
+          <li>资源获取 +200%</li>
+          <li>击杀金币 +150%</li>
+          <li>炮台伤害 +120%</li>
+          <li>复活次数 +20</li>
+          <li>门窗血量 +100%</li>
+          <li>特种兵部队 x3</li>
+          <li>幸存者上限 +12</li>
+          <li>建筑上限 50座</li>
+          <li>至尊紫色铭牌</li>
+          <li>全武器满级强化</li>
+          <li>搜索收益翻倍</li>
+          <li>自动修复速度x3</li>
+          <li>雇佣兵免费x2</li>
+        </ul>
+        <button class="buyVipBtn" onclick="buyVip('svipPlus')">立即开通</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 开始 -->
+  <div id="startScreen">
+    <h1>死寂地带</h1>
+    <div class="subtitle">DEAD ZONE FORTRESS</div>
+    <button class="startBtn" onclick="startGame()">进入废土</button>
+    <div class="controls">
+      WASD — 移动 &nbsp;&nbsp; 鼠标左键 — 射击 &nbsp;&nbsp; Shift — 冲刺<br>
+      R — 换弹 &nbsp;&nbsp; E — 互动 &nbsp;&nbsp; H — 基地 &nbsp;&nbsp; G — 建筑<br>
+      K — 枪械升级 &nbsp;&nbsp; L — 抽奖 &nbsp;&nbsp; P — 幸存者 &nbsp;&nbsp; M — 雇佣兵<br>
+      ☀ 白天安全发育 · 🌙 夜晚连续尸潮 · 🌑 每5天血月灾变
+    </div>
+  </div>
+  
+  <div id="gameOver">
+    <h2>堡垒陷落</h2>
+    <div class="stats" id="finalStats"></div>
+    <button class="startBtn" onclick="restartGame()">重新开始</button>
+  </div>
+  
+  <div id="musicToggle" onclick="toggleMusic()">🎵</div>
+  <div id="toast"></div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// ==================== 全局状态 ====================
+let gameRunning = false;
+let player, zombies, bullets, particles, pickups;
+let base;
+let playerBuildings = [];
+let survivors = [];
+let mercenaries = [];
+let searchBuildings = [];
+let boss = null;
+let currentLevel = 0;
+let levelCleared = false;
+const LEVEL_CONFIG = [
+  { name:'废土堡垒', bgColor:'#1a1612', ruinCount:14, searchCount:28, debrisCount:40, bossHP:600, theme:'day' },
+  { name:'暗夜医院', bgColor:'#0a1a0a', ruinCount:18, searchCount:34, debrisCount:55, bossHP:1000, theme:'night' },
+  { name:'军事禁区', bgColor:'#1a1a0a', ruinCount:16, searchCount:25, debrisCount:35, bossHP:800, theme:'day' },
+  { name:'地下实验室', bgColor:'#050510', ruinCount:22, searchCount:38, debrisCount:60, bossHP:1600, theme:'night' },
+  { name:'死寂炼狱', bgColor:'#0a0000', ruinCount:10, searchCount:18, debrisCount:25, bossHP:3000, theme:'bloodmoon' },
+];
+
+let camera = { x: 0, y: 0 };
+let mouseX = 0, mouseY = 0;
+let keys = {};
+let membership = 'none';
+let revives = 0;
+let screenShake = 0;
+let nearInteractable = null;
+let musicOn = false;
+let musicOsc = null;
+let musicNoteInterval = null;
+let dayCount = 1;
+let isBloodMoon = false;
+let bossSpawned = false;
+
+// 辐射区
+const radiationZone = {
+  x: 600, y: 500,
+  radius: 250,
+  active: true
+};
+
+// 昼夜系统 - 白天20秒，夜晚180秒
+const DAY_DURATION = 20 * 60;
+const NIGHT_DURATION = 180 * 60;
+let isDaytime = true;
+let dayNightTimer = DAY_DURATION;
+
+// 资源
+let resources = { food: 20, parts: 20, meds: 5, ammo: 100, gold: 0, crystal: 0 };
+
+// 背包
+let inventory = { capacity: 24, items: [] };
+
+// 波次系统 - 优化：夜晚连续刷新
+let wave = 1;
+let waveActive = false;
+let waveSpawnComplete = false; // 当前波是否全部生成完毕
+let zombiesToSpawn = 0;
+let spawnTimer = 0;
+let totalKills = 0;
+
+// 地图
+const MAP_W = 4800;
+const MAP_H = 3600;
+let walls = [];
+let debris = [];
+
+// ==================== 音效系统 ====================
+const AudioSys = {
+  ctx: null,
+  init() {
+    try {
+      if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+    } catch(e) {}
+  },
+  tone(freq, dur=0.1, vol=0.03, type='sine') {
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      g.gain.setValueAtTime(vol, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+      o.connect(g);
+      g.connect(this.ctx.destination);
+      o.start();
+      o.stop(this.ctx.currentTime + dur);
+    } catch(e) {}
+  },
+  shootPistol() { this.tone(180, 0.08, 0.04, 'square'); this.tone(90, 0.12, 0.03, 'sawtooth'); },
+  shootSMG() { this.tone(220, 0.05, 0.03, 'square'); this.tone(120, 0.06, 0.02, 'sawtooth'); },
+  shootShotgun() { this.tone(100, 0.15, 0.05, 'sawtooth'); this.tone(60, 0.2, 0.04, 'square'); },
+  shootRifle() { this.tone(200, 0.07, 0.035, 'square'); this.tone(110, 0.1, 0.025, 'sawtooth'); },
+  shootSniper() { this.tone(150, 0.2, 0.05, 'sawtooth'); this.tone(80, 0.25, 0.04, 'square'); },
+  shootFlamethrower() { this.tone(200, 0.03, 0.02, 'sawtooth'); },
+  shootRailgun() { this.tone(400, 0.15, 0.05, 'sine'); this.tone(200, 0.2, 0.04, 'sawtooth'); },
+  shootGrenade() { this.tone(120, 0.3, 0.06, 'sawtooth'); },
+  shootLaser() { this.tone(800, 0.1, 0.04, 'sine'); this.tone(600, 0.15, 0.03, 'sine'); },
+  reload() {
+    this.tone(300, 0.05, 0.02);
+    setTimeout(() => this.tone(250, 0.05, 0.02), 100);
+    setTimeout(() => this.tone(350, 0.06, 0.02), 250);
+  },
+  hit() { this.tone(150, 0.08, 0.03, 'sawtooth'); },
+  zombieDie() { this.tone(100, 0.15, 0.03, 'sawtooth'); },
+  playerHurt() { this.tone(80, 0.2, 0.04, 'sawtooth'); },
+  pickup() { this.tone(600, 0.05, 0.02); this.tone(800, 0.05, 0.02); },
+  upgrade() {
+    [400, 500, 600, 800].forEach((f,i) => setTimeout(() => this.tone(f, 0.08, 0.03), i*60));
+  },
+  build() {
+    this.tone(200, 0.1, 0.03, 'square');
+    this.tone(300, 0.1, 0.03, 'square');
+  },
+  windowBreak() {
+    this.tone(100, 0.3, 0.05, 'sawtooth');
+    this.tone(80, 0.4, 0.04, 'square');
+  },
+  waveStart() {
+    [200, 180, 160, 140].forEach((f,i) => setTimeout(() => this.tone(f, 0.15, 0.04, 'sawtooth'), i*120));
+  },
+  bossRoar() {
+    [80, 60, 50, 40].forEach((f,i) => setTimeout(() => this.tone(f, 0.3, 0.05, 'sawtooth'), i*200));
+  },
+  search() {
+    this.tone(400, 0.06, 0.02);
+    setTimeout(() => this.tone(500, 0.06, 0.02), 80);
+  },
+  gachaRoll() {
+    for (let i = 0; i < 10; i++) {
+      setTimeout(() => this.tone(300 + i*50, 0.05, 0.02), i*40);
+    }
+  },
+  gachaWin() {
+    [523, 659, 784, 1047].forEach((f,i) => setTimeout(() => this.tone(f, 0.1, 0.04), i*80));
+  },
+  dayNight() {
+    [300, 400, 500].forEach((f,i) => setTimeout(() => this.tone(f, 0.2, 0.025), i*150));
+  },
+  explosion() {
+    this.tone(60, 0.4, 0.06, 'sawtooth');
+    this.tone(40, 0.5, 0.05, 'square');
+  }
+};
+
+// 背景音乐 - 多音轨系统
+function startMusic(track) {
+  if (!AudioSys.ctx) AudioSys.init();
+  if (musicOn) stopMusic();
+  musicOn = true;
+  document.getElementById('musicToggle').textContent = '🔊';
+  const t = track || (isDaytime ? 'day' : (isBloodMoon ? 'bloodmoon' : 'night'));
+  playBGM(t);
+}
+
+let bgmTimer = null;
+function playBGM(type) {
+  stopBGM();
+  if (!musicOn) return;
+  const tracks = {
+    day:   { notes:[196,220,261,196,220,261,294,261,220,196,220,261,294,330,294,261], bpm:120, vol:0.015, type:'triangle' },
+    night: { notes:[130,164,196,130,164,196,220,196,164,146,164,196,220,261,220,196], bpm:100, vol:0.02, type:'sine' },
+    bloodmoon:{ notes:[98,130,164,98,130,164,196,164,130,110,130,164,196,220,196,164], bpm:140, vol:0.025, type:'sawtooth' },
+    boss:  { notes:[82,110,146,82,110,146,174,146,110,98,110,146,174,220,174,146], bpm:160, vol:0.03, type:'sawtooth' },
+    menu:  { notes:[261,329,392,523,392,329,261,261,329,392,523,392,329,261], bpm:130, vol:0.015, type:'triangle' },
+    victory:{ notes:[523,587,659,784,659,784,1047,784,659,587,523,659,784,1047], bpm:160, vol:0.02, type:'triangle' },
+  };
+  const track = tracks[type] || tracks.day;
+  let i = 0;
+  function note() {
+    if (!musicOn) { bgmTimer = null; return; }
+    const f = track.notes[i % track.notes.length];
+    const d = 60 / track.bpm;
+    AudioSys.tone(f, d * 0.85, track.vol, track.type);
+    i++;
+    bgmTimer = setTimeout(note, d * 1000);
+  }
+  note();
+}
+
+function stopBGM() { if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = null; } }
+
+function stopMusic() {
+  musicOn = false;
+  document.getElementById('musicToggle').textContent = '🎵';
+  stopBGM();
+  if (musicOsc) { try { musicOsc.stop(); } catch(e) {} musicOsc = null; }
+  if (musicNoteInterval) { clearInterval(musicNoteInterval); musicNoteInterval = null; }
+}
+
+function toggleMusic() {
+  if (musicOn) stopMusic();
+  else startMusic();
+}
+
+// ==================== 武器系统 ====================
+const weapons = {
+  pistol: { 
+    name:'手枪', icon:'🔫', baseDamage:18, baseFireRate:280, baseMag:12, reload:1100, baseSpread:0.04, speed:13, pellets:1, 
+    unlocked:true, price:0, sound:'shootPistol',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  smg: { 
+    name:'冲锋枪', icon:'🔫', baseDamage:9, baseFireRate:90, baseMag:35, reload:1400, baseSpread:0.11, speed:15, pellets:1, 
+    unlocked:false, price:250, vip:'vip', sound:'shootSMG',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  shotgun: { 
+    name:'霰弹枪', icon:'💥', baseDamage:10, baseFireRate:650, baseMag:8, reload:1900, baseSpread:0.28, speed:10, pellets:8, 
+    unlocked:false, price:400, vip:'svip', sound:'shootShotgun',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  rifle: { 
+    name:'突击步枪', icon:'🎯', baseDamage:22, baseFireRate:150, baseMag:30, reload:1600, baseSpread:0.06, speed:14, pellets:1, 
+    unlocked:false, price:500, vip:'vip', sound:'shootRifle',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  sniper: { 
+    name:'狙击枪', icon:'🔭', baseDamage:90, baseFireRate:1200, baseMag:5, reload:2200, baseSpread:0.01, speed:18, pellets:1, 
+    unlocked:false, price:800, vip:'svip', sound:'shootSniper',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  flamethrower: { 
+    name:'火焰喷射器', icon:'🔥', baseDamage:5, baseFireRate:40, baseMag:100, reload:2800, baseSpread:0.15, speed:7, pellets:1, fire:true,
+    unlocked:false, price:1200, vip:'svip', sound:'shootFlamethrower',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  grenadeLauncher: {
+    name:'榴弹发射器', icon:'💣', baseDamage:60, baseFireRate:900, baseMag:6, reload:2400, baseSpread:0.05, speed:10, pellets:1, explosive:true,
+    unlocked:false, price:1500, vip:'svip', sound:'shootGrenade',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  laserRifle: {
+    name:'激光步枪', icon:'⚡', baseDamage:35, baseFireRate:120, baseMag:40, reload:2000, baseSpread:0.02, speed:20, pellets:1, pierce:true,
+    unlocked:false, price:2000, vip:'svipPlus', sound:'shootLaser',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  railgun: {
+    name:'电磁轨道炮', icon:'⚡', baseDamage:200, baseFireRate:2000, baseMag:3, reload:3500, baseSpread:0.005, speed:25, pellets:1, pierce:true,
+    unlocked:false, price:0, hidden:true, sound:'shootRailgun',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  crossbow: {
+    name:'爆炸弩', icon:'🏹', baseDamage:75, baseFireRate:500, baseMag:1, reload:1200, baseSpread:0.02, speed:11, pellets:1, explosive:true,
+    unlocked:false, price:1000, vip:'vip', sound:'shootRifle',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  },
+  plasmaCannon: {
+    name:'等离子炮', icon:'🌀', baseDamage:120, baseFireRate:1500, baseMag:10, reload:3000, baseSpread:0.04, speed:12, pellets:3, pierce:true, explosive:true,
+    unlocked:false, price:2500, vip:'svipPlus', sound:'shootLaser',
+    levels: { damage:0, fireRate:0, mag:0, spread:0 }
+  }
+};
+
+function getWeaponStats(key) {
+  const w = weapons[key];
+  const lv = w.levels;
+  return {
+    damage: w.baseDamage * (1 + lv.damage * 0.15),
+    fireRate: w.baseFireRate * (1 - lv.fireRate * 0.1),
+    mag: Math.floor(w.baseMag * (1 + lv.mag * 0.2)),
+    spread: w.baseSpread * (1 - lv.spread * 0.12),
+    speed: w.speed,
+    pellets: w.pellets,
+    fire: w.fire,
+    pierce: w.pierce,
+    explosive: w.explosive,
+    reload: w.reload
+  };
+}
+
+let currentWeapon = 'pistol';
+let magAmmo = 12;
+let reloading = false;
+let lastShot = 0;
+const weaponOrder = ['pistol','smg','shotgun','rifle','sniper','flamethrower','crossbow','grenadeLauncher','laserRifle','plasmaCannon','railgun'];
+
+// ==================== 炮台类型 ====================
+const turretTypes = {
+  machinegun: { name:'机枪塔', icon:'🔫', damage:8, fireRate:20, range:180, cost:30, color:'#6a8a6a' },
+  flame: { name:'火焰塔', icon:'🔥', damage:3, fireRate:8, range:120, cost:50, fire:true, color:'#c86030' },
+  sniper: { name:'狙击塔', icon:'🎯', damage:40, fireRate:80, range:300, cost:70, color:'#6a6a9a' },
+  tesla: { name:'电磁塔', icon:'⚡', damage:15, fireRate:40, range:150, cost:90, color:'#6a9ac8' },
+  missile: { name:'导弹塔', icon:'🚀', damage:80, fireRate:120, range:250, cost:120, color:'#aa4040' }
+};
+
+// ==================== 可建造建筑 ====================
+const buildingTypes = {
+  wall: { name:'加固围墙', icon:'🧱', desc:'阻挡丧尸的墙体', cost:15, hp:150 },
+  barbed: { name:'铁丝网', icon:'⛓️', desc:'减速经过的丧尸', cost:20, slow:0.5 },
+  mine: { name:'地雷', icon:'💣', desc:'踩到爆炸造成范围伤害', cost:25, damage:80 },
+  sentry: { name:'岗哨', icon:'🗼', desc:'扩大视野，增加炮台射程', cost:40, rangeBonus:30 },
+  medstation: { name:'医疗站', icon:'🏥', desc:'靠近持续回血', cost:60, healRate:0.3 },
+  ammobox: { name:'弹药箱', icon:'📦', desc:'定期产出弹药', cost:45, ammoGen:0.1 },
+  turretPad: { name:'炮台基座', icon:'🔧', desc:'额外炮台位', cost:80, extraTurret:true }
+};
+
+// ==================== 基地升级配置 ====================
+const baseUpgrades = [
+  { id:'wall', name:'窗户加固', desc:'所有窗户最大生命值+150', maxLevel:15,
+    getCost: lv => 30 + lv*25,
+    apply: lv => { base.windows.forEach(w => { w.maxHp += 150; w.hp += 150; }); }
+  },
+  { id:'gate', name:'大门强化', desc:'大门血量+400，更难被攻破', maxLevel:12,
+    getCost: lv => 40 + lv*35,
+    apply: lv => { base.gateMaxHp += 400; base.gateHp += 400; }
+  },
+  { id:'engine', name:'发动机强化', desc:'发动机最大生命+120', maxLevel:10,
+    getCost: lv => 35 + lv*30,
+    apply: lv => { base.maxEngineHp += 120; base.engineHp += 120; }
+  },
+  { id:'turretDmg', name:'弹药升级', desc:'所有炮台伤害+25%', maxLevel:8,
+    getCost: lv => 30 + lv*25,
+    apply: lv => { base.turretDamageMult = 1 + lv*0.25; }
+  },
+  { id:'medbay', name:'医疗站', desc:'靠近基地每秒回血+0.25', maxLevel:6,
+    getCost: lv => 20 + lv*18,
+    apply: lv => { base.healRate = 0.25 * lv; }
+  },
+  { id:'workshop', name:'弹药工坊', desc:'自动生产弹药速度+100%', maxLevel:6,
+    getCost: lv => 25 + lv*20,
+    apply: lv => { base.ammoGen = 0.1 * lv; }
+  },
+  { id:'radar', name:'雷达站', desc:'搜索收益+25%', maxLevel:6,
+    getCost: lv => 20 + lv*15,
+    apply: lv => { base.scavengeBonus = 1 + lv*0.25; }
+  },
+  { id:'storage', name:'仓库扩建', desc:'背包容量+6格', maxLevel:6,
+    getCost: lv => 15 + lv*12,
+    apply: lv => { 
+      inventory.capacity = 24 + lv*6;
+      if (membership === 'vip') inventory.capacity += 12;
+      if (membership === 'svip') inventory.capacity += 20;
+      if (membership === 'svipPlus') inventory.capacity += 30;
+    }
+  }
+];
+let baseLevels = {};
+baseUpgrades.forEach(u => baseLevels[u.id] = 0);
+
+// ==================== 基地碰撞检测 ====================
+const WALL_THICKNESS = 22;
+const GATE_WIDTH = 44;
+const WINDOW_WIDTH = 50;
+
+function checkBaseCollision(x, y, r, isPlayer = false, isBullet = false) {
+  if (!base) return false;
+  const bx = base.x, by = base.y;
+  const hw = base.w / 2;
+  const hh = base.h / 2;
+  
+  // 子弹可以穿过门窗墙
+  if (isBullet) return false;
+  
+  // 玩家可以自由进出门窗
+  if (isPlayer) return false;
+  
+  // 北墙
+  if (y - r < by - hh + WALL_THICKNESS && y + r > by - hh) {
+    if (x + r > bx - hw && x - r < bx + hw) {
+      if (x > bx - WINDOW_WIDTH/2 && x < bx + WINDOW_WIDTH/2) {
+        if (base.windows[0].hp > 0) return true;
+      } else {
+        return true;
+      }
+    }
+  }
+  
+  // 南墙
+  if (y + r > by + hh - WALL_THICKNESS && y - r < by + hh) {
+    if (x + r > bx - hw && x - r < bx + hw) {
+      if (x > bx - GATE_WIDTH/2 && x < bx + GATE_WIDTH/2) {
+        if (base.gateHp > 0) return true;
+      } else {
+        return true;
+      }
+    }
+  }
+  
+  // 西墙
+  if (x - r < bx - hw + WALL_THICKNESS && x + r > bx - hw) {
+    if (y + r > by - hh && y - r < by + hh) {
+      if (y > by - WINDOW_WIDTH/2 && y < by + WINDOW_WIDTH/2) {
+        if (base.windows[2].hp > 0) return true;
+      } else {
+        return true;
+      }
+    }
+  }
+  
+  // 东墙
+  if (x + r > bx + hw - WALL_THICKNESS && x - r < bx + hw) {
+    if (y + r > by - hh && y - r < by + hh) {
+      if (y > by - WINDOW_WIDTH/2 && y < by + WINDOW_WIDTH/2) {
+        if (base.windows[3].hp > 0) return true;
+      } else {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+// ==================== 玩家类 ====================
+class Player {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.r = 14;
+    this.speed = 3.4;
+    this.maxHp = 100;
+    this.hp = 100;
+    this.maxStamina = 100;
+    this.stamina = 100;
+    this.angle = 0;
+    this.invincible = 0;
+    this.radiationTimer = 0;
+  }
+  
+  update() {
+    let dx = 0, dy = 0;
+    if (keys['w'] || keys['arrowup']) dy -= 1;
+    if (keys['s'] || keys['arrowdown']) dy += 1;
+    if (keys['a'] || keys['arrowleft']) dx -= 1;
+    if (keys['d'] || keys['arrowright']) dx += 1;
+    
+    let spd = this.speed;
+    let sprinting = keys['shift'] && this.stamina > 0 && (dx || dy);
+    if (sprinting) { spd *= 1.9; this.stamina -= cheats.infStamina ? 0 : 0.9; }
+    else { this.stamina = Math.min(this.maxStamina, this.stamina + 0.4); }
+    if (cheats.doubleSpeed) spd *= 2;
+    if (cheats.infStamina) this.stamina = this.maxStamina;
+    
+    if (dx || dy) {
+      let len = Math.sqrt(dx*dx + dy*dy);
+      dx /= len; dy /= len;
+      let nx = this.x + dx * spd;
+      let ny = this.y + dy * spd;
+      
+      if (!this.collidesAll(nx, this.y)) this.x = nx;
+      if (!this.collidesAll(this.x, ny)) this.y = ny;
+      
+      this.x = Math.max(this.r, Math.min(MAP_W - this.r, this.x));
+      this.y = Math.max(this.r, Math.min(MAP_H - this.r, this.y));
+    }
+    
+    const wmx = mouseX + camera.x;
+    const wmy = mouseY + camera.y;
+    this.angle = Math.atan2(wmy - this.y, wmx - this.x);
+    if (this.invincible > 0) this.invincible--;
+    
+    // 辐射区伤害
+    const distToRad = Math.hypot(this.x - radiationZone.x, this.y - radiationZone.y);
+    if (distToRad < radiationZone.radius) {
+      this.radiationTimer++;
+      if (this.radiationTimer >= 60) {
+        this.radiationTimer = 0;
+        this.hp -= 2;
+      }
+    } else {
+      this.radiationTimer = Math.max(0, this.radiationTimer - 2);
+    }
+    
+    // 基地回血
+    if (base && base.healRate > 0) {
+      const dist = Math.hypot(this.x - base.x, this.y - base.y);
+      if (dist < 180) this.hp = Math.min(this.maxHp, this.hp + base.healRate * 0.016);
+    }
+    
+    // 建筑回血
+    for (let b of playerBuildings) {
+      if (b.type === 'medstation') {
+        if (Math.hypot(this.x - b.x, this.y - b.y) < 80) {
+          this.hp = Math.min(this.maxHp, this.hp + 0.3 * 0.016);
+        }
+      }
+    }
+    
+    // 检测可互动物体
+    nearInteractable = null;
+    for (let b of searchBuildings) {
+      if (!b.searched && Math.hypot(this.x - b.x, this.y - b.y) < 55) {
+        nearInteractable = { type:'building', target:b };
+        break;
+      }
+    }
+    document.getElementById('interactPrompt').style.display = nearInteractable ? 'block' : 'none';
+  }
+  
+  collidesAll(x, y) {
+    for (let w of walls) {
+      if (x + this.r > w.x && x - this.r < w.x + w.w &&
+          y + this.r > w.y && y - this.r < w.y + w.h) return true;
+    }
+    return false;
+  }
+  
+  takeDamage(dmg) {
+    if (cheats.god) return;
+    if (this.invincible > 0) return;
+    this.hp -= dmg;
+    this.invincible = 25;
+    screenShake = 8;
+    AudioSys.playerHurt();
+    
+    const dmgOv = document.getElementById('damageOverlay');
+    dmgOv.style.opacity = '1';
+    setTimeout(() => dmgOv.style.opacity = '0', 150);
+    
+    for (let i = 0; i < 10; i++) {
+      particles.push(new Particle(this.x, this.y, '#c02020',
+        (Math.random()-0.5)*7, (Math.random()-0.5)*7, 25));
+    }
+    
+    if (this.hp <= 0) {
+      if (revives > 0) {
+        revives--;
+        this.hp = this.maxHp * 0.6;
+        showToast('复活！剩余 ' + revives + ' 次');
+        zombies = [];
+      } else gameOver();
+    }
+  }
+  
+  draw() {
+    ctx.save();
+    ctx.translate(this.x - camera.x, this.y - camera.y);
+    ctx.rotate(this.angle);
+    
+    if (this.invincible > 0 && Math.floor(this.invincible / 3) % 2) ctx.globalAlpha = 0.4;
+    
+    ctx.fillStyle = '#3a5a2a';
+    ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#2a3a1a';
+    ctx.fillRect(-8, -10, 16, 20);
+    ctx.fillStyle = '#c8a070';
+    ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#2a3a1a';
+    ctx.beginPath(); ctx.arc(0, -1, 7, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(8, -2.5, 18, 5);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(22, -3.5, 4, 7);
+    
+    ctx.restore();
+  }
+}
+
+// ==================== 丧尸类 ====================
+class Zombie {
+  constructor(x, y, type = 'normal') {
+    this.x = x; this.y = y;
+    this.type = type;
+    
+    let baseSpeed, baseHp, baseDmg, baseR;
+    if (type === 'fast') { baseSpeed = 2.8; baseHp = 35; baseDmg = 8; baseR = 11; }
+    else if (type === 'tank') { baseSpeed = 0.9; baseHp = 180; baseDmg = 30; baseR = 24; }
+    else { baseSpeed = 1.4; baseHp = 65; baseDmg = 12; baseR = 14; }
+
+    const waveMult = 1 + (wave - 1) * 0.12;
+    const speedMult = 1 + (wave - 1) * 0.04;
+    const dmgMult = 1 + (wave - 1) * 0.08;
+    const bloodMult = isBloodMoon ? 1.5 : 1;
+    
+    this.r = baseR;
+    this.speed = baseSpeed * speedMult * bloodMult;
+    this.hp = baseHp * waveMult * bloodMult;
+    this.maxHp = this.hp;
+    this.damage = baseDmg * dmgMult * bloodMult;
+    
+    this.attackCd = 0;
+    this.animFrame = 0;
+    this.animT = 0;
+    this.hurtFlash = 0;
+    this.burning = 0;
+    this.slowTimer = 0;
+    this.targetWindow = null;
+    this.insideBase = false;
+  }
+  
+  update() {
+    let speedMod = 1;
+    if (this.slowTimer > 0) { speedMod = 0.5; this.slowTimer--; }
+    
+    for (let b of playerBuildings) {
+      if (b.type === 'barbed') {
+        if (Math.hypot(this.x - b.x, this.y - b.y) < 25) {
+          speedMod = 0.4;
+          this.hp -= 0.2;
+        }
+      }
+    }
+    
+    this.insideBase = this.x > base.x - base.w/2 + WALL_THICKNESS && 
+                     this.x < base.x + base.w/2 - WALL_THICKNESS &&
+                     this.y > base.y - base.h/2 + WALL_THICKNESS && 
+                     this.y < base.y + base.h/2 - WALL_THICKNESS;
+    
+    let targetX, targetY, targetType;
+    const distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
+    
+    if (this.insideBase) {
+      if (distToPlayer < 200) {
+        targetX = player.x; targetY = player.y; targetType = 'player';
+      } else {
+        targetX = base.x; targetY = base.y; targetType = 'engine';
+      }
+    } else {
+      let minDist = Infinity;
+      let nearestTarget = null;
+      let nearestType = null;
+      
+      base.windows.forEach((w, i) => {
+        if (w.hp > 0) {
+          const d = Math.hypot(w.x - this.x, w.y - this.y);
+          if (d < minDist) {
+            minDist = d;
+            nearestTarget = w;
+            nearestType = 'window';
+          }
+        }
+      });
+      
+      if (base.gateHp > 0) {
+        const gateX = base.x;
+        const gateY = base.y + base.h / 2;
+        const d = Math.hypot(gateX - this.x, gateY - this.y);
+        if (d < minDist) {
+          minDist = d;
+          nearestTarget = { x: gateX, y: gateY };
+          nearestType = 'gate';
+        }
+      }
+      
+      if (!nearestTarget) {
+        targetX = base.x; targetY = base.y; targetType = 'engine';
+      } else {
+        targetX = nearestTarget.x;
+        targetY = nearestTarget.y;
+        targetType = nearestType;
+        this.targetWindow = nearestTarget;
+      }
+      
+      if (distToPlayer < minDist * 0.6 && distToPlayer < 300) {
+        targetX = player.x; targetY = player.y; targetType = 'player';
+      }
+    }
+    
+    const dx = targetX - this.x;
+    const dy = targetY - this.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    if (dist > this.r + 5) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const newX = this.x + nx * this.speed * speedMod;
+      const newY = this.y + ny * this.speed * speedMod;
+      
+      let canMoveX = true, canMoveY = true;
+      if (checkBaseCollision(newX, this.y, this.r)) canMoveX = false;
+      if (checkBaseCollision(this.x, newY, this.r)) canMoveY = false;
+      
+      for (let w of walls) {
+        if (newX + this.r > w.x && newX - this.r < w.x + w.w &&
+            this.y + this.r > w.y && this.y - this.r < w.y + w.h) canMoveX = false;
+        if (this.x + this.r > w.x && this.x - this.r < w.x + w.w &&
+            newY + this.r > w.y && newY - this.r < w.y + w.h) canMoveY = false;
+      }
+      
+      if (canMoveX) this.x = newX;
+      if (canMoveY) this.y = newY;
+    }
+    
+    if (this.attackCd > 0) this.attackCd--;
+    
+    if (targetType === 'player' && dist < this.r + player.r + 2) {
+      if (this.attackCd <= 0) {
+        player.takeDamage(this.damage);
+        this.attackCd = 55;
+      }
+    } else if (targetType === 'window' && dist < this.r + 25) {
+      if (this.attackCd <= 0 && this.targetWindow) {
+        this.targetWindow.hp -= this.damage;
+        this.attackCd = 50;
+        AudioSys.hit();
+        if (this.targetWindow.hp <= 0) {
+          this.targetWindow.hp = 0;
+          AudioSys.windowBreak();
+          screenShake = 10;
+          showToast('⚠️ 窗户被攻破！');
+        }
+      }
+    } else if (targetType === 'gate' && dist < this.r + 25) {
+      if (this.attackCd <= 0) {
+        base.gateHp -= this.damage;
+        this.attackCd = 45;
+        AudioSys.hit();
+        if (base.gateHp <= 0) {
+          base.gateHp = 0;
+          AudioSys.windowBreak();
+          screenShake = 15;
+          showToast('⚠️ 大门被攻破！');
+        }
+      }
+    } else if (targetType === 'engine' && dist < this.r + 45) {
+      if (this.attackCd <= 0) {
+        base.engineHp -= this.damage * 0.5;
+        this.attackCd = 45;
+        screenShake = 6;
+        if (base.engineHp <= 0) gameOver();
+      }
+    }
+    
+    for (let i = playerBuildings.length - 1; i >= 0; i--) {
+      const b = playerBuildings[i];
+      if (b.type === 'mine' && !b.triggered) {
+        if (Math.hypot(this.x - b.x, this.y - b.y) < 20) {
+          b.triggered = true;
+          for (let z of zombies) {
+            if (Math.hypot(z.x - b.x, z.y - b.y) < 80) {
+              z.hp -= 80;
+            }
+          }
+          screenShake = 12;
+          for (let j = 0; j < 30; j++) {
+            particles.push(new Particle(b.x, b.y, '#ff6020',
+              (Math.random()-0.5)*12, (Math.random()-0.5)*12, 30));
+          }
+          setTimeout(() => {
+            const idx = playerBuildings.indexOf(b);
+            if (idx > -1) playerBuildings.splice(idx, 1);
+          }, 100);
+          break;
+        }
+      }
+    }
+    
+    if (this.burning > 0) {
+      this.burning--;
+      if (this.burning % 10 === 0) {
+        this.hp -= 3;
+        particles.push(new Particle(this.x, this.y, '#ff6020',
+          (Math.random()-0.5)*2, -Math.random()*3, 15));
+      }
+    }
+    
+    this.animT++;
+    if (this.animT > 12) { this.animT = 0; this.animFrame ^= 1; }
+    if (this.hurtFlash > 0) this.hurtFlash--;
+    
+    return this.hp > 0;
+  }
+  
+  takeDamage(dmg, fire = false) {
+    if (window.cheats && cheats.instantKill) dmg = this.hp; // 一击必杀
+    this.hp -= dmg;
+    this.hurtFlash = 4;
+
+    const angle = Math.atan2(this.y - player.y, this.x - player.x);
+    this.x += Math.cos(angle) * 2;
+    this.y += Math.sin(angle) * 2;
+
+    if (fire) this.burning = 60;
+    
+    if (this.hp <= 0) {
+      this.die();
+      return true;
+    }
+    return false;
+  }
+  
+  die() {
+    totalKills++;
+    AudioSys.zombieDie();
+    let goldDrop = 4 + Math.floor(Math.random() * 7);
+    if (membership === 'vip') goldDrop = Math.floor(goldDrop * 1.3);
+    if (membership === 'svip') goldDrop = Math.floor(goldDrop * 1.8);
+    if (membership === 'svipPlus') goldDrop = Math.floor(goldDrop * 2.5);
+    if (isBloodMoon) goldDrop = Math.floor(goldDrop * 2);
+    resources.gold += goldDrop;
+    
+    for (let i = 0; i < 15; i++) {
+      particles.push(new Particle(this.x, this.y, '#5a1010',
+        (Math.random()-0.5)*9, (Math.random()-0.5)*9, 35));
+    }
+    
+    if (Math.random() < 0.2) {
+      const types = ['food','parts','meds','ammo'];
+      pickups.push(new Pickup(this.x, this.y, types[Math.floor(Math.random()*types.length)]));
+    }
+    if (Math.random() < 0.35) {
+      pickups.push(new Pickup(this.x + (Math.random()-0.5)*20, this.y + (Math.random()-0.5)*20, 'gold'));
+    }
+    if (isBloodMoon && Math.random() < 0.05) {
+      pickups.push(new Pickup(this.x, this.y, 'crystal'));
+    }
+  }
+  
+  draw() {
+    const sx = this.x - camera.x;
+    const sy = this.y - camera.y;
+    
+    ctx.save();
+    ctx.translate(sx, sy);
+    
+    let bodyColor = this.type === 'tank' ? '#4a2020' : 
+                    this.type === 'fast' ? '#3a5a3a' : '#4a6a3a';
+    if (this.hurtFlash > 0) bodyColor = '#fff';
+    if (this.burning > 0) bodyColor = '#ff6020';
+    if (isBloodMoon) bodyColor = '#6a1010';
+    
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, this.r*0.6, this.r*0.8, this.r*0.3, 0, 0, Math.PI*2);
+    ctx.fill();
+    
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI*2); ctx.fill();
+    
+    ctx.fillStyle = this.type === 'tank' ? '#3a1515' : '#2a3a20';
+    ctx.fillRect(-this.r*0.7, -this.r*0.3, this.r*1.4, this.r*0.6);
+    
+    ctx.fillStyle = isBloodMoon ? '#ffff00' : '#ff2020';
+    const eo = this.animFrame ? 1 : 0;
+    ctx.beginPath();
+    ctx.arc(-4, -3 + eo, 2.5, 0, Math.PI*2);
+    ctx.arc(4, -3 + eo, 2.5, 0, Math.PI*2);
+    ctx.fill();
+    
+    if (this.hp < this.maxHp) {
+      const bw = this.r * 2;
+      ctx.fillStyle = '#300';
+      ctx.fillRect(-bw/2, -this.r - 7, bw, 3);
+      ctx.fillStyle = '#d02020';
+      ctx.fillRect(-bw/2, -this.r - 7, bw * (this.hp/this.maxHp), 3);
+    }
+    
+    ctx.restore();
+  }
+}
+
+// ==================== Boss类 ====================
+class Boss {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.r = 45;
+    this.speed = 0.8;
+    this.maxHp = 2000;
+    this.hp = 2000;
+    this.damage = 35;
+    this.attackCd = 0;
+    this.phase = 1;
+    this.specialCd = 0;
+    this.hurtFlash = 0;
+    this.name = '辐射巨兽';
+  }
+  
+  update() {
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    if (dist > this.r + player.r + 10) {
+      this.x += (dx / dist) * this.speed;
+      this.y += (dy / dist) * this.speed;
+    }
+    
+    if (this.attackCd > 0) this.attackCd--;
+    if (this.specialCd > 0) this.specialCd--;
+    
+    if (dist < this.r + player.r + 5) {
+      if (this.attackCd <= 0) {
+        player.takeDamage(this.damage);
+        this.attackCd = 60;
+        screenShake = 15;
+      }
+    }
+    
+    // 特殊攻击：召唤小怪
+    if (this.specialCd <= 0) {
+      this.specialCd = 300;
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2;
+        zombies.push(new Zombie(
+          this.x + Math.cos(angle) * 60,
+          this.y + Math.sin(angle) * 60,
+          Math.random() < 0.3 ? 'fast' : 'normal'
+        ));
+      }
+      showToast('Boss召唤了尸群！');
+    }
+    
+    // 阶段变化
+    if (this.hp < this.maxHp * 0.5 && this.phase === 1) {
+      this.phase = 2;
+      this.speed = 1.2;
+      this.damage = 50;
+      showToast('Boss进入狂暴状态！');
+      screenShake = 20;
+    }
+    
+    if (this.hurtFlash > 0) this.hurtFlash--;
+    
+    return this.hp > 0;
+  }
+  
+  takeDamage(dmg) {
+    this.hp -= dmg;
+    this.hurtFlash = 4;
+    
+    if (this.hp <= 0) {
+      this.die();
+      return true;
+    }
+    return false;
+  }
+  
+  die() {
+    AudioSys.explosion();
+    screenShake = 30;
+    
+    // 丰厚掉落
+    resources.gold += 500;
+    resources.crystal += 5;
+    resources.parts += 100;
+    resources.ammo += 200;
+    resources.meds += 20;
+    
+    for (let i = 0; i < 50; i++) {
+      particles.push(new Particle(this.x, this.y, 
+        ['#ff2020','#ff8020','#ffff20'][Math.floor(Math.random()*3)],
+        (Math.random()-0.5)*15, (Math.random()-0.5)*15, 60));
+    }
+    
+    showToast('🎉 击败Boss！获得大量战利品！');
+    boss = null;
+  }
+  
+  draw() {
+    const sx = this.x - camera.x;
+    const sy = this.y - camera.y;
+    
+    ctx.save();
+    ctx.translate(sx, sy);
+    
+    // 辐射光环
+    const grad = ctx.createRadialGradient(0, 0, this.r * 0.5, 0, 0, this.r * 1.5);
+    grad.addColorStop(0, 'rgba(0, 255, 100, 0.3)');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(0, 0, this.r * 1.5, 0, Math.PI*2); ctx.fill();
+    
+    let bodyColor = this.hurtFlash > 0 ? '#fff' : (this.phase === 2 ? '#6a1010' : '#3a5a1a');
+    
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI*2); ctx.fill();
+    
+    // 尖刺
+    ctx.fillStyle = '#2a4a0a';
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + Date.now() / 2000;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * this.r, Math.sin(angle) * this.r);
+      ctx.lineTo(Math.cos(angle - 0.15) * this.r * 0.7, Math.sin(angle - 0.15) * this.r * 0.7);
+      ctx.lineTo(Math.cos(angle + 0.15) * this.r * 0.7, Math.sin(angle + 0.15) * this.r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+    }
+    
+    // 眼睛
+    ctx.fillStyle = this.phase === 2 ? '#ff0000' : '#00ff00';
+    ctx.beginPath();
+    ctx.arc(-12, -8, 8, 0, Math.PI*2);
+    ctx.arc(12, -8, 8, 0, Math.PI*2);
+    ctx.fill();
+    
+    // 血条
+    const bw = this.r * 2.5;
+    ctx.fillStyle = '#300';
+    ctx.fillRect(-bw/2, -this.r - 20, bw, 6);
+    ctx.fillStyle = this.phase === 2 ? '#ff2020' : '#40c040';
+    ctx.fillRect(-bw/2, -this.r - 20, bw * (this.hp/this.maxHp), 6);
+    
+    // Boss名字
+    ctx.fillStyle = '#ff4040';
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, 0, -this.r - 28);
+    
+    ctx.restore();
+  }
+}
+
+// ==================== 子弹类 ====================
+class Bullet {
+  constructor(x, y, angle, speed, damage, isFire = false, fromTurret = false, pierce = false, explosive = false) {
+    this.x = x; this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.damage = damage;
+    this.life = isFire ? 20 : 60;
+    this.fire = isFire;
+    this.size = isFire ? 6 : 3;
+    this.fromTurret = fromTurret;
+    this.pierce = pierce;
+    this.explosive = explosive;
+    this.hitCount = 0;
+  }
+  
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life--;
+    
+    if (this.fire) { this.vx *= 0.92; this.vy *= 0.92; }
+    
+    for (let w of walls) {
+      if (this.x > w.x && this.x < w.x + w.w &&
+          this.y > w.y && this.y < w.y + w.h) {
+        if (this.explosive) {
+          this.explode();
+          return false;
+        }
+        if (!this.pierce) this.life = 0;
+        for (let i = 0; i < 3; i++) {
+          particles.push(new Particle(this.x, this.y, this.fire ? '#ff6020' : '#ffa040',
+            (Math.random()-0.5)*3, (Math.random()-0.5)*3, 8));
+        }
+        break;
+      }
+    }
+    
+    // 基地墙不挡子弹 - 子弹可以穿透门窗射击
+    // 打僵尸
+    for (let i = zombies.length - 1; i >= 0; i--) {
+      const z = zombies[i];
+      if (Math.hypot(this.x - z.x, this.y - z.y) < z.r + this.size) {
+        if (this.explosive) {
+          this.explode();
+          return false;
+        }
+        if (z.takeDamage(this.damage, this.fire)) zombies.splice(i, 1);
+        this.hitCount++;
+        if (!this.pierce || this.hitCount >= 3) {
+          if (!this.fire) this.life = 0;
+          break;
+        }
+      }
+    }
+    
+    // 打Boss
+    if (boss) {
+      if (Math.hypot(this.x - boss.x, this.y - boss.y) < boss.r + this.size) {
+        if (this.explosive) {
+          this.explode();
+          return false;
+        }
+        boss.takeDamage(this.damage);
+        this.hitCount++;
+        if (!this.pierce || this.hitCount >= 3) {
+          if (!this.fire) this.life = 0;
+        }
+      }
+    }
+    
+    return this.life > 0;
+  }
+  
+  explode() {
+    AudioSys.explosion();
+    screenShake = 8;
+    
+    const radius = 80;
+    for (let i = zombies.length - 1; i >= 0; i--) {
+      const z = zombies[i];
+      if (Math.hypot(this.x - z.x, this.y - z.y) < radius) {
+        if (z.takeDamage(this.damage * 1.5)) zombies.splice(i, 1);
+      }
+    }
+    
+    if (boss && Math.hypot(this.x - boss.x, this.y - boss.y) < radius) {
+      boss.takeDamage(this.damage * 1.5);
+    }
+    
+    for (let i = 0; i < 25; i++) {
+      particles.push(new Particle(this.x, this.y,
+        ['#ff4020','#ff8020','#ffc020'][Math.floor(Math.random()*3)],
+        (Math.random()-0.5)*12, (Math.random()-0.5)*12, 30));
+    }
+  }
+  
+  draw() {
+    const sx = this.x - camera.x;
+    const sy = this.y - camera.y;
+    
+    if (this.fire) {
+      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, this.size * 2);
+      grad.addColorStop(0, 'rgba(255,200,50,0.9)');
+      grad.addColorStop(0.5, 'rgba(255,100,20,0.6)');
+      grad.addColorStop(1, 'rgba(255,50,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(sx, sy, this.size * 2, 0, Math.PI*2); ctx.fill();
+    } else if (this.explosive) {
+      ctx.fillStyle = '#ff8020';
+      ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#ff4020';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - this.vx*2, sy - this.vy*2);
+      ctx.stroke();
+    } else if (this.pierce) {
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#00ffff';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - this.vx*3, sy - this.vy*3);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.fillStyle = this.fromTurret ? '#80c0ff' : '#ffee66';
+      ctx.beginPath();
+      ctx.arc(sx, sy, this.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = this.fromTurret ? 'rgba(128,192,255,0.5)' : 'rgba(255,220,80,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - this.vx * 2, sy - this.vy * 2);
+      ctx.stroke();
+    }
+  }
+}
+
+// ==================== 粒子 ====================
+class Particle {
+  constructor(x, y, color, vx, vy, life) {
+    this.x = x; this.y = y;
+    this.color = color;
+    this.vx = vx; this.vy = vy;
+    this.life = life;
+    this.maxLife = life;
+    this.size = 2 + Math.random() * 4;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= 0.94;
+    this.vy *= 0.94;
+    this.vy += 0.05;
+    this.life--;
+    return this.life > 0;
+  }
+
+  draw() {
+    ctx.globalAlpha = this.life / this.maxLife;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(
+      this.x - camera.x - this.size / 2,
+      this.y - camera.y - this.size / 2,
+      this.size,
+      this.size
+    );
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ==================== 拾取物 ====================
+class Pickup {
+  constructor(x, y, type) {
+    this.x = x; this.y = y;
+    this.type = type;
+    this.bob = Math.random() * Math.PI * 2;
+    this.life = 700;
+  }
+
+  update() {
+    this.bob += 0.08;
+    this.life--;
+
+    const dist = Math.hypot(this.x - player.x, this.y - player.y);
+    const pickRange = membership !== 'none' ? 55 : 32;
+
+    if (dist < pickRange) {
+      this.collect();
+      return false;
+    }
+
+    if (membership !== 'none' && dist < 130) {
+      const angle = Math.atan2(player.y - this.y, player.x - this.x);
+      this.x += Math.cos(angle) * 3.5;
+      this.y += Math.sin(angle) * 3.5;
+    }
+
+    return this.life > 0;
+  }
+
+  collect() {
+    AudioSys.pickup();
+    let mult = 1;
+    if (membership === 'svip') mult = 2.2;
+    if (membership === 'vip') mult = 1.5;
+    if (membership === 'svipPlus') mult = 3;
+
+    switch(this.type) {
+      case 'food': resources.food += Math.floor(2 * mult); break;
+      case 'parts': resources.parts += Math.floor(1 * mult); break;
+      case 'meds': resources.meds += Math.floor(1 * mult); break;
+      case 'ammo': resources.ammo += Math.floor(6 * mult); break;
+      case 'gold': resources.gold += Math.floor(6 * mult); break;
+      case 'crystal': resources.crystal += 1; break;
+      case 'health':
+        player.hp = Math.min(player.maxHp, player.hp + 35);
+        showToast('+35 生命');
+        break;
+    }
+  }
+
+  draw() {
+    const yOff = Math.sin(this.bob) * 3;
+    const sx = this.x - camera.x;
+    const sy = this.y - camera.y + yOff;
+
+    const colors = {
+      food: '#80c040',
+      parts: '#a0a0a0',
+      meds: '#40a0e0',
+      ammo: '#e0c040',
+      gold: '#ffd060',
+      health: '#e04040',
+      crystal: '#a040ff'
+    };
+
+    ctx.save();
+    ctx.globalAlpha = 0.3 + Math.sin(this.bob * 2) * 0.2;
+
+    const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 15);
+    grad.addColorStop(0, colors[this.type]);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(sx - 15, sy - 15, 30, 30);
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = colors[this.type];
+
+    if (this.type === 'health') {
+      ctx.fillRect(sx - 5, sy - 2, 10, 4);
+      ctx.fillRect(sx - 2, sy - 5, 4, 10);
+    } else if (this.type === 'gold') {
+      ctx.beginPath();
+      ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (this.type === 'crystal') {
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 7);
+      ctx.lineTo(sx + 5, sy);
+      ctx.lineTo(sx, sy + 7);
+      ctx.lineTo(sx - 5, sy);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.fillRect(sx - 4, sy - 4, 8, 8);
+    }
+
+    ctx.restore();
+  }
+}
+
+// ==================== 幸存者 ====================
+class Survivor {
+  constructor(x, y, type = 'soldier') {
+    this.x = x; this.y = y;
+    this.type = type;
+    this.r = 11;
+    
+    if (type === 'elite') {
+      this.maxHp = 250;
+      this.damage = 50;
+      this.fireRate = 18;
+      this.range = 280;
+      this.speed = 2;
+    } else {
+      this.maxHp = type === 'heavy' ? 130 : (type === 'sniper' ? 70 : 90);
+      this.damage = type === 'sniper' ? 35 : (type === 'heavy' ? 14 : 20);
+      this.fireRate = type === 'sniper' ? 95 : (type === 'heavy' ? 28 : 45);
+      this.range = type === 'sniper' ? 300 : 200;
+      this.speed = 1.6;
+    }
+    
+    this.hp = this.maxHp;
+    this.cooldown = 0;
+    this.angle = 0;
+    this.target = null;
+    this.name = this.genName();
+  }
+
+  genName() {
+    if (this.type === 'elite') {
+      const names = ['狼王', '影刃', '雷霆', '铁血', '幽灵', '战神'];
+      return names[Math.floor(Math.random() * names.length)] + '·特种兵';
+    }
+    const names = ['老王', '铁柱', '大兵', '阿强', '丽莎', '约翰', '马克', '安娜', '汤姆', '露西', '刀锋', '野狼'];
+    return names[Math.floor(Math.random() * names.length)];
+  }
+
+  update() {
+    this.cooldown--;
+
+    let nearest = null;
+    let minDist = this.range;
+
+    for (let z of zombies) {
+      const d = Math.hypot(z.x - this.x, z.y - this.y);
+      if (d < minDist) {
+        minDist = d;
+        nearest = z;
+      }
+    }
+    
+    if (boss) {
+      const d = Math.hypot(boss.x - this.x, boss.y - this.y);
+      if (d < minDist) nearest = boss;
+    }
+
+    this.target = nearest;
+
+    if (nearest) {
+      this.angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+
+      if (minDist < this.range * 0.5) {
+        const angle = Math.atan2(this.y - nearest.y, this.x - nearest.x);
+        this.x += Math.cos(angle) * this.speed * 0.4;
+        this.y += Math.sin(angle) * this.speed * 0.4;
+      } else if (minDist > this.range * 0.8) {
+        const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+        this.x += Math.cos(angle) * this.speed * 0.6;
+        this.y += Math.sin(angle) * this.speed * 0.6;
+      }
+
+      if (this.cooldown <= 0) {
+        this.cooldown = this.fireRate;
+        bullets.push(new Bullet(this.x, this.y, this.angle, 13, this.damage, false, true));
+      }
+    } else {
+      const homeDist = Math.hypot(base.x - this.x, base.y - this.y);
+      if (homeDist > 120) {
+        const angle = Math.atan2(base.y - this.y, base.x - this.x);
+        this.x += Math.cos(angle) * this.speed;
+        this.y += Math.sin(angle) * this.speed;
+      }
+    }
+
+    for (let z of zombies) {
+      if (Math.hypot(z.x - this.x, z.y - this.y) < z.r + this.r) {
+        if (z.attackCd <= 0) {
+          this.hp -= z.damage * 0.5;
+          z.attackCd = 30;
+        }
+      }
+    }
+
+    return this.hp > 0;
+  }
+
+  draw() {
+    const sx = this.x - camera.x;
+    const sy = this.y - camera.y;
+
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(this.angle);
+
+    const colors = {
+      soldier: '#4a6a8a',
+      heavy: '#8a4a4a',
+      sniper: '#4a8a6a',
+      elite: '#8a2aaa'
+    };
+
+    ctx.fillStyle = colors[this.type] || '#4a6a8a';
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#c8a070';
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#222';
+    ctx.fillRect(6, -2, 12, 4);
+    
+    if (this.type === 'elite') {
+      ctx.strokeStyle = '#ff80ff';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.r + 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    if (this.hp < this.maxHp) {
+      ctx.fillStyle = '#300';
+      ctx.fillRect(sx - 12, sy - 18, 24, 3);
+      ctx.fillStyle = this.type === 'elite' ? '#c040ff' : '#4a8a4a';
+      ctx.fillRect(sx - 12, sy - 18, 24 * (this.hp / this.maxHp), 3);
+    }
+  }
+}
+
+// ==================== 雇佣兵（跟随玩家） ====================
+class Mercenary {
+  constructor(x, y, type = 'assault') {
+    this.x = x; this.y = y;
+    this.type = type;
+    this.r = 12;
+    
+    const stats = {
+      assault: { hp: 150, dmg: 25, fireRate: 25, range: 220, speed: 2.2 },
+      sniper: { hp: 90, dmg: 70, fireRate: 70, range: 350, speed: 1.8 },
+      heavy: { hp: 250, dmg: 15, fireRate: 15, range: 180, speed: 1.5 }
+    };
+    
+    const s = stats[type] || stats.assault;
+    this.maxHp = s.hp;
+    this.hp = s.hp;
+    this.damage = s.dmg;
+    this.fireRate = s.fireRate;
+    this.range = s.range;
+    this.speed = s.speed;
+    this.cooldown = 0;
+    this.angle = 0;
+    this.followDist = 60;
+    this.name = this.genName();
+  }
+  
+  genName() {
+    const names = ['雷克', '莎拉', '凯恩', '薇拉', '但丁', '妮可', '雷泽', '希尔德'];
+    return names[Math.floor(Math.random() * names.length)];
+  }
+  
+  update() {
+    this.cooldown--;
+    
+    // 跟随玩家
+    const distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
+    if (distToPlayer > this.followDist) {
+      const angle = Math.atan2(player.y - this.y, player.x - this.x);
+      this.x += Math.cos(angle) * this.speed;
+      this.y += Math.sin(angle) * this.speed;
+    }
+    
+    // 寻找目标
+    let nearest = null;
+    let minDist = this.range;
+    
+    for (let z of zombies) {
+      const d = Math.hypot(z.x - this.x, z.y - this.y);
+      if (d < minDist) { minDist = d; nearest = z; }
+    }
+    
+    if (boss) {
+      const d = Math.hypot(boss.x - this.x, boss.y - this.y);
+      if (d < minDist) nearest = boss;
+    }
+    
+    if (nearest) {
+      this.angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+      if (this.cooldown <= 0) {
+        this.cooldown = this.fireRate;
+        bullets.push(new Bullet(this.x, this.y, this.angle, 14, this.damage, false, true));
+      }
+    } else {
+      this.angle = player.angle;
+    }
+    
+    // 受伤检测
+    for (let z of zombies) {
+      if (Math.hypot(z.x - this.x, z.y - this.y) < z.r + this.r) {
+        if (z.attackCd <= 0) {
+          this.hp -= z.damage * 0.6;
+          z.attackCd = 30;
+        }
+      }
+    }
+    
+    return this.hp > 0;
+  }
+  
+  draw() {
+    const sx = this.x - camera.x;
+    const sy = this.y - camera.y;
+    
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(this.angle);
+    
+    const colors = { assault: '#8a6a2a', sniper: '#2a6a8a', heavy: '#8a4a2a' };
+    ctx.fillStyle = colors[this.type] || '#8a6a2a';
+    ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI*2); ctx.fill();
+    
+    ctx.fillStyle = '#d4a070';
+    ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+    
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(7, -2.5, 14, 5);
+    
+    ctx.strokeStyle = '#ffd080';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r + 2, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    ctx.restore();
+    
+    if (this.hp < this.maxHp) {
+      ctx.fillStyle = '#300';
+      ctx.fillRect(sx - 14, sy - 20, 28, 3);
+      ctx.fillStyle = '#ffd060';
+      ctx.fillRect(sx - 14, sy - 20, 28 * (this.hp / this.maxHp), 3);
+    }
+  }
+}
+
+// ==================== 搜索建筑 ====================
+class SearchBuilding {
+  constructor(x, y, isRadiation = false) {
+    this.x = x; this.y = y;
+    this.w = isRadiation ? 140 : 110 + Math.random() * 50;
+    this.h = isRadiation ? 130 : 100 + Math.random() * 50;
+    this.searched = false;
+    this.isRadiation = isRadiation;
+    this.rooms = isRadiation ? [
+      { name: '实验室', icon: '🧪', searched: false },
+      { name: '控制室', icon: '🖥️', searched: false },
+      { name: '储藏室', icon: '📦', searched: false },
+      { name: '核心区', icon: '☢️', searched: false }
+    ] : [
+      { name: '客厅', icon: '🛋️', searched: false },
+      { name: '厨房', icon: '🍳', searched: false },
+      { name: '卧室', icon: '🛏️', searched: false },
+      { name: '地下室', icon: '🔦', searched: false }
+    ];
+  }
+
+  searchRoom(index) {
+    const room = this.rooms[index];
+    if (room.searched) return null;
+
+    room.searched = true;
+    AudioSys.search();
+
+    const allSearched = this.rooms.every(r => r.searched);
+    if (allSearched) this.searched = true;
+
+    let bonus = base.scavengeBonus;
+    if (membership === 'svip') bonus *= 2.2;
+    if (membership === 'vip') bonus *= 1.5;
+    if (membership === 'svipPlus') bonus *= 3;
+    if (this.isRadiation) bonus *= 3;
+    
+    const roll = Math.random();
+
+    if (roll < (this.isRadiation ? 0.25 : 0.12)) {
+      const n = this.isRadiation ? 2 + Math.floor(Math.random() * 2) : 1 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < n; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        zombies.push(new Zombie(
+          this.x + Math.cos(angle) * 70,
+          this.y + Math.sin(angle) * 70,
+          this.isRadiation ? 'tank' : 'normal'
+        ));
+      }
+      return { type: 'danger', msg: '遭遇 ' + n + ' 只丧尸！' };
+    } else if (roll < (this.isRadiation ? 0.35 : 0.2)) {
+      if (survivors.length < getSurvivorLimit()) {
+        const types = this.isRadiation ? ['heavy', 'sniper'] : ['soldier', 'heavy', 'sniper'];
+        const t = types[Math.floor(Math.random() * types.length)];
+        survivors.push(new Survivor(this.x, this.y, t));
+        return { type: 'survivor', msg: '发现一名幸存者！' };
+      }
+    }
+
+    const loot = {};
+    loot.food = Math.floor((2 + Math.random() * 4) * bonus);
+    loot.parts = Math.floor((2 + Math.random() * 5) * bonus);
+
+    if (Math.random() < 0.45) loot.meds = Math.floor((1 + Math.random() * 3) * bonus);
+    if (Math.random() < 0.55) loot.ammo = Math.floor((6 + Math.random() * 10) * bonus);
+    if (Math.random() < 0.35) loot.gold = Math.floor((15 + Math.random() * 25) * bonus);
+    if (this.isRadiation && Math.random() < 0.4) loot.crystal = 1 + Math.floor(Math.random() * 2);
+
+    for (let k in loot) resources[k] += loot[k];
+
+    return { type: 'loot', msg: '获得物资！', data: loot };
+  }
+
+  draw() {
+    const sx = this.x - camera.x - this.w / 2;
+    const sy = this.y - camera.y - this.h / 2;
+
+    ctx.fillStyle = this.searched ? '#2a2520' : (this.isRadiation ? '#2a3a2a' : '#3a3028');
+    ctx.fillRect(sx, sy, this.w, this.h);
+
+    ctx.fillStyle = this.searched ? '#1a1510' : (this.isRadiation ? '#1a2a1a' : '#2a2018');
+    ctx.beginPath();
+    ctx.moveTo(sx - 5, sy);
+    ctx.lineTo(sx + this.w / 2, sy - 22);
+    ctx.lineTo(sx + this.w + 5, sy);
+    ctx.closePath();
+    ctx.fill();
+
+    if (this.isRadiation) {
+      ctx.fillStyle = 'rgba(0, 255, 100, 0.15)';
+      ctx.fillRect(sx, sy, this.w, this.h);
+      ctx.fillStyle = '#00ff40';
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('☢', sx + this.w / 2, sy + this.h / 2);
+    }
+
+    ctx.fillStyle = this.searched ? '#111' : '#1a1a2a';
+    const winW = 14, winH = 16;
+    ctx.fillRect(sx + 18, sy + 28, winW, winH);
+    ctx.fillRect(sx + this.w - 32, sy + 28, winW, winH);
+    ctx.fillRect(sx + 18, sy + this.h - 45, winW, winH);
+    ctx.fillRect(sx + this.w - 32, sy + this.h - 45, winW, winH);
+
+    ctx.fillStyle = '#1a1510';
+    ctx.fillRect(sx + this.w / 2 - 11, sy + this.h - 28, 22, 28);
+
+    if (!this.searched) {
+      ctx.fillStyle = this.isRadiation ? 'rgba(0,255,100,0.25)' : 'rgba(212,184,96,0.25)';
+      ctx.fillRect(sx, sy, this.w, this.h);
+      ctx.fillStyle = this.isRadiation ? '#00ff40' : '#d4b860';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('?', sx + this.w / 2, sy + this.h / 2);
+    }
+  }
+}
+
+// ==================== 基地类 ====================
+class Base {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.w = 260;
+    this.h = 200;
+    this.maxEngineHp = 350;
+    this.engineHp = 350;
+    this.gateMaxHp = 2500;
+    this.gateHp = 2500;
+    this.turrets = [];
+    this.turretSlots = 8;
+    this.turretDamageMult = 1;
+    this.healRate = 0;
+    this.ammoGen = 0;
+    this.scavengeBonus = 1;
+    this.autoRepair = false;
+    this.repairTimer = 0;
+    this.repairSpeed = 1;
+
+    const baseWindowHp = membership === 'svipPlus' ? 1600 : 800;
+    this.windows = [
+      { x: x, y: y - this.h / 2, side: 'top', hp: baseWindowHp, maxHp: baseWindowHp },
+      { x: x, y: y + this.h / 2, side: 'bottom', hp: baseWindowHp, maxHp: baseWindowHp },
+      { x: x - this.w / 2, y: y, side: 'left', hp: baseWindowHp, maxHp: baseWindowHp },
+      { x: x + this.w / 2, y: y, side: 'right', hp: baseWindowHp, maxHp: baseWindowHp }
+    ];
+
+    this.turretPositions = [
+      { x: x - 90, y: y - 80 },
+      { x: x + 90, y: y - 80 },
+      { x: x - 90, y: y + 80 },
+      { x: x + 90, y: y + 80 },
+      { x: x - 120, y: y },
+      { x: x + 120, y: y },
+      { x: x, y: y - 100 },
+      { x: x, y: y + 100 }
+    ];
+  }
+
+  buildTurret(slotIndex, type) {
+    if (this.turrets[slotIndex]) return false;
+    const pos = this.turretPositions[slotIndex];
+    const tType = turretTypes[type];
+
+    this.turrets[slotIndex] = {
+      x: pos.x, y: pos.y,
+      type: type,
+      angle: 0,
+      cooldown: 0,
+      ...tType
+    };
+    AudioSys.build();
+    return true;
+  }
+
+  update() {
+    for (let t of this.turrets) {
+      if (!t) continue;
+      t.cooldown--;
+
+      let nearest = null;
+      let minDist = t.range;
+
+      for (let z of zombies) {
+        const d = Math.hypot(z.x - t.x, z.y - t.y);
+        if (d < minDist) {
+          minDist = d;
+          nearest = z;
+        }
+      }
+      
+      if (boss) {
+        const d = Math.hypot(boss.x - t.x, boss.y - t.y);
+        if (d < minDist) nearest = boss;
+      }
+
+      if (nearest) {
+        t.angle = Math.atan2(nearest.y - t.y, nearest.x - t.x);
+        if (t.cooldown <= 0) {
+          t.cooldown = t.fireRate;
+          let dmgMult = this.turretDamageMult;
+          if (membership === 'svip') dmgMult *= 1.6;
+          if (membership === 'svipPlus') dmgMult *= 2.2;
+          bullets.push(new Bullet(t.x, t.y, t.angle, 12, t.damage * dmgMult, t.fire, true));
+        }
+      }
+    }
+
+    if (this.ammoGen > 0) resources.ammo += this.ammoGen * 0.016;
+
+    for (let b of playerBuildings) {
+      if (b.type === 'ammobox') {
+        resources.ammo += 0.1 * 0.016;
+      }
+    }
+
+    if (this.autoRepair) {
+      this.repairTimer++;
+      const interval = Math.floor(100 / this.repairSpeed);
+      if (this.repairTimer >= interval) {
+        this.repairTimer = 0;
+        for (let w of this.windows) {
+          if (w.hp < w.maxHp) {
+            w.hp = Math.min(w.maxHp, w.hp + 5 * this.repairSpeed);
+            break;
+          }
+        }
+        if (this.gateHp < this.gateMaxHp) {
+          this.gateHp = Math.min(this.gateMaxHp, this.gateHp + 8 * this.repairSpeed);
+        }
+        if (this.engineHp < this.maxEngineHp) {
+          this.engineHp = Math.min(this.maxEngineHp, this.engineHp + 3 * this.repairSpeed);
+        }
+      }
+    }
+  }
+
+  draw() {
+    const sx = this.x - camera.x;
+    const sy = this.y - camera.y;
+
+    // 基地主体
+    ctx.fillStyle = '#2a241c';
+    ctx.fillRect(sx - this.w / 2, sy - this.h / 2, this.w, this.h);
+
+    // 墙体纹理
+    ctx.strokeStyle = '#1a1510';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.moveTo(sx - this.w / 2, sy - this.h / 2 + i * 35);
+      ctx.lineTo(sx + this.w / 2, sy - this.h / 2 + i * 35);
+      ctx.stroke();
+    }
+
+    // 实体墙高亮
+    ctx.fillStyle = '#4a3a28';
+    ctx.fillRect(sx - this.w/2, sy - this.h/2, this.w, WALL_THICKNESS);
+    ctx.fillRect(sx - this.w/2, sy + this.h/2 - WALL_THICKNESS, this.w, WALL_THICKNESS);
+    ctx.fillRect(sx - this.w/2, sy - this.h/2, WALL_THICKNESS, this.h);
+    ctx.fillRect(sx + this.w/2 - WALL_THICKNESS, sy - this.h/2, WALL_THICKNESS, this.h);
+
+    // 墙角加固
+    ctx.fillStyle = '#3a3028';
+    ctx.fillRect(sx - this.w / 2 - 6, sy - this.h / 2 - 6, 18, 18);
+    ctx.fillRect(sx + this.w / 2 - 12, sy - this.h / 2 - 6, 18, 18);
+    ctx.fillRect(sx - this.w / 2 - 6, sy + this.h / 2 - 12, 18, 18);
+    ctx.fillRect(sx + this.w / 2 - 12, sy + this.h / 2 - 12, 18, 18);
+
+    // 四个窗户
+    for (let w of this.windows) {
+      const wx = w.x - camera.x;
+      const wy = w.y - camera.y;
+      const broken = w.hp <= 0;
+
+      ctx.fillStyle = broken ? '#0a0806' : '#1a1a2a';
+      if (w.side === 'top' || w.side === 'bottom') {
+        ctx.fillRect(wx - 25, wy - 10, 50, 20);
+      } else {
+        ctx.fillRect(wx - 10, wy - 25, 20, 50);
+      }
+
+      if (!broken) {
+        ctx.strokeStyle = '#4a4030';
+        ctx.lineWidth = 2.5;
+        if (w.side === 'top' || w.side === 'bottom') {
+          for (let i = -18; i <= 18; i += 12) {
+            ctx.beginPath();
+            ctx.moveTo(wx + i, wy - 10);
+            ctx.lineTo(wx + i, wy + 10);
+            ctx.stroke();
+          }
+        } else {
+          for (let i = -18; i <= 18; i += 12) {
+            ctx.beginPath();
+            ctx.moveTo(wx - 10, wy + i);
+            ctx.lineTo(wx + 10, wy + i);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // 窗户血条
+      const barW = 44;
+      ctx.fillStyle = '#200';
+      if (w.side === 'top') ctx.fillRect(wx - barW / 2, wy - 20, barW, 3);
+      if (w.side === 'bottom') ctx.fillRect(wx - barW / 2, wy + 17, barW, 3);
+      if (w.side === 'left') ctx.fillRect(wx - 20, wy - barW / 2, 3, barW);
+      if (w.side === 'right') ctx.fillRect(wx + 17, wy - barW / 2, 3, barW);
+
+      ctx.fillStyle = w.hp > w.maxHp * 0.3 ? '#d4b860' : '#c02020';
+      const ratio = w.hp / w.maxHp;
+      if (w.side === 'top') ctx.fillRect(wx - barW / 2, wy - 20, barW * ratio, 3);
+      if (w.side === 'bottom') ctx.fillRect(wx - barW / 2, wy + 17, barW * ratio, 3);
+      if (w.side === 'left') ctx.fillRect(wx - 20, wy - barW / 2, 3, barW * ratio);
+      if (w.side === 'right') ctx.fillRect(wx + 17, wy - barW / 2, 3, barW * ratio);
+    }
+
+    // 南大门
+    const gateBroken = this.gateHp <= 0;
+    ctx.fillStyle = gateBroken ? '#0a0806' : '#1a1510';
+    ctx.fillRect(sx - GATE_WIDTH/2, sy + this.h / 2 - 8, GATE_WIDTH, 32);
+    if (!gateBroken) {
+      ctx.fillStyle = '#3a3020';
+      ctx.fillRect(sx - 18, sy + this.h / 2 - 4, 36, 28);
+      ctx.strokeStyle = '#5a4a30';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx - GATE_WIDTH/2, sy + this.h / 2 - 8, GATE_WIDTH, 32);
+      // 大门血条
+      ctx.fillStyle = '#200';
+      ctx.fillRect(sx - 30, sy + this.h / 2 + 28, 60, 4);
+      ctx.fillStyle = '#d4a040';
+      ctx.fillRect(sx - 30, sy + this.h / 2 + 28, 60 * (this.gateHp / this.gateMaxHp), 4);
+    }
+
+    // 发动机
+    const glow = 0.35 + Math.sin(Date.now() / 450) * 0.2;
+    const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 45);
+    grad.addColorStop(0, `rgba(255,180,50,${glow})`);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(sx - 45, sy - 45, 90, 90);
+
+    ctx.fillStyle = '#4a3a20';
+    ctx.fillRect(sx - 25, sy - 25, 50, 50);
+    ctx.fillStyle = '#6a5a30';
+    ctx.fillRect(sx - 25, sy - 25, 50, 10);
+
+    // 炮台
+    for (let t of this.turrets) {
+      if (!t) continue;
+      const tx = t.x - camera.x;
+      const ty = t.y - camera.y;
+
+      ctx.fillStyle = '#3a3028';
+      ctx.beginPath();
+      ctx.arc(tx, ty, 13, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.rotate(t.angle);
+      ctx.fillStyle = t.color || '#555';
+      ctx.fillRect(0, -3.5, 20, 7);
+      ctx.restore();
+    }
+
+    // 空炮台位
+    for (let i = 0; i < this.turretPositions.length; i++) {
+      if (this.turrets[i]) continue;
+      const pos = this.turretPositions[i];
+      const px = pos.x - camera.x;
+      const py = pos.y - camera.y;
+
+      ctx.strokeStyle = 'rgba(100,90,70,0.25)';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(px, py, 11, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+}
+
+// ==================== 地图生成 ====================
+function generateMap() {
+  walls = [];
+  debris = [];
+  searchBuildings = [];
+  playerBuildings = [];
+
+  // 边界
+  walls.push({ x: 0, y: 0, w: MAP_W, h: 20 });
+  walls.push({ x: 0, y: MAP_H - 20, w: MAP_W, h: 20 });
+  walls.push({ x: 0, y: 0, w: 20, h: MAP_H });
+  walls.push({ x: MAP_W - 20, y: 0, w: 20, h: MAP_H });
+
+  // 废墟建筑墙体
+  const lvl = LEVEL_CONFIG[currentLevel] || LEVEL_CONFIG[0];
+  const ruinCount = lvl.ruinCount;
+  for (let i = 0; i < ruinCount; i++) {
+    const bw = 80 + Math.random() * 110;
+    const bh = 80 + Math.random() * 110;
+    const bx = 150 + Math.random() * (MAP_W - 300 - bw);
+    const by = 150 + Math.random() * (MAP_H - 300 - bh);
+
+    if (Math.hypot(bx + bw / 2 - MAP_W / 2, by + bh / 2 - MAP_H / 2) < 320) continue;
+    if (Math.hypot(bx + bw / 2 - radiationZone.x, by + bh / 2 - radiationZone.y) < radiationZone.radius + 50) continue;
+
+    walls.push({ x: bx, y: by, w: bw, h: 10 });
+    walls.push({ x: bx, y: by + bh - 10, w: bw, h: 10 });
+    walls.push({ x: bx, y: by, w: 10, h: bh });
+    walls.push({ x: bx + bw - 10, y: by, w: 10, h: bh });
+
+    for (let j = 0; j < 4; j++) {
+      debris.push({
+        x: bx + 20 + Math.random() * (bw - 40),
+        y: by + 20 + Math.random() * (bh - 40),
+        size: 8 + Math.random() * 14
+      });
+    }
+  }
+
+  // 可搜索房屋
+  for (let i = 0; i < lvl.searchCount; i++) {
+    const sx = 250 + Math.random() * (MAP_W - 500);
+    const sy = 250 + Math.random() * (MAP_H - 500);
+    if (Math.hypot(sx - MAP_W / 2, sy - MAP_H / 2) < 280) continue;
+    if (Math.hypot(sx - radiationZone.x, sy - radiationZone.y) < radiationZone.radius) continue;
+    searchBuildings.push(new SearchBuilding(sx, sy));
+  }
+  
+  // 辐射区建筑
+  searchBuildings.push(new SearchBuilding(radiationZone.x, radiationZone.y, true));
+
+  // 散落障碍
+  for (let i = 0; i < lvl.debrisCount; i++) {
+    const ox = 80 + Math.random() * (MAP_W - 160);
+    const oy = 80 + Math.random() * (MAP_H - 160);
+    if (Math.hypot(ox - MAP_W / 2, oy - MAP_H / 2) < 200) continue;
+    walls.push({ x: ox, y: oy, w: 25 + Math.random() * 25, h: 25 + Math.random() * 25 });
+  }
+
+  // 车辆残骸
+  for (let i = 0; i < lvl.debrisCount; i++) {
+    debris.push({
+      x: 120 + Math.random() * (MAP_W - 240),
+      y: 120 + Math.random() * (MAP_H - 240),
+      size: 32 + Math.random() * 18,
+      car: true
+    });
+  }
+}
+
+function refreshSearchBuildings() {
+  for (let b of searchBuildings) {
+    b.searched = false;
+    b.rooms.forEach(r => r.searched = false);
+  }
+  showToast('📦 物资点已每日刷新！');
+}
+
+function drawMap() {
+  ctx.fillStyle = '#1e1a16';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 地面棋盘纹理
+  ctx.fillStyle = '#181410';
+  const tile = 80;
+  const sx = -camera.x % tile;
+  const sy = -camera.y % tile;
+  for (let x = sx; x < canvas.width; x += tile) {
+    for (let y = sy; y < canvas.height; y += tile) {
+      if ((Math.floor((x + camera.x) / tile) + Math.floor((y + camera.y) / tile)) % 2) {
+        ctx.fillRect(x, y, tile, tile);
+      }
+    }
+  }
+  
+  // 辐射区
+  const radX = radiationZone.x - camera.x;
+  const radY = radiationZone.y - camera.y;
+  if (radX > -radiationZone.radius && radX < canvas.width + radiationZone.radius &&
+      radY > -radiationZone.radius && radY < canvas.height + radiationZone.radius) {
+    const grad = ctx.createRadialGradient(radX, radY, 0, radX, radY, radiationZone.radius);
+    grad.addColorStop(0, 'rgba(0, 255, 80, 0.15)');
+    grad.addColorStop(0.7, 'rgba(0, 180, 60, 0.08)');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(radX, radY, radiationZone.radius, 0, Math.PI*2); ctx.fill();
+    
+    // 辐射标识
+    ctx.fillStyle = 'rgba(0, 255, 100, 0.3)';
+    ctx.font = 'bold 24px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('☢ 辐射区', radX, radY - radiationZone.radius + 30);
+  }
+
+  // 碎片残骸
+  for (let d of debris) {
+    const dx = d.x - camera.x;
+    const dy = d.y - camera.y;
+    if (dx < -60 || dx > canvas.width + 60 || dy < -60 || dy > canvas.height + 60) continue;
+
+    if (d.car) {
+      ctx.fillStyle = '#2a2018';
+      ctx.fillRect(dx - d.size / 2, dy - d.size / 3, d.size, d.size * 0.66);
+      ctx.fillStyle = '#1a1410';
+      ctx.fillRect(dx - d.size / 3, dy - d.size / 4, d.size * 0.66, d.size * 0.4);
+    } else {
+      ctx.fillStyle = '#2a241a';
+      ctx.fillRect(dx - d.size / 2, dy - d.size / 2, d.size, d.size * 0.7);
+    }
+  }
+
+  // 玩家建造的建筑
+  for (let b of playerBuildings) {
+    drawBuilding(b);
+  }
+
+  // 地图墙壁
+  for (let w of walls) {
+    const wx = w.x - camera.x;
+    const wy = w.y - camera.y;
+    if (wx + w.w < 0 || wx > canvas.width || wy + w.h < 0 || wy > canvas.height) continue;
+
+    ctx.fillStyle = '#3a3028';
+    ctx.fillRect(wx, wy, w.w, w.h);
+    ctx.fillStyle = '#4a4038';
+    ctx.fillRect(wx, wy, w.w, 3);
+    ctx.fillStyle = '#2a2018';
+    ctx.fillRect(wx, wy + w.h - 2, w.w, 2);
+  }
+
+  // 血迹
+  ctx.fillStyle = 'rgba(80,10,10,0.22)';
+  for (let i = 0; i < 50; i++) {
+    const bx = ((i * 137) % MAP_W) - camera.x;
+    const by = ((i * 251) % MAP_H) - camera.y;
+    if (bx > 0 && bx < canvas.width && by > 0 && by < canvas.height) {
+      ctx.beginPath();
+      ctx.arc(bx, by, 15 + (i % 5) * 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawBuilding(b) {
+  const bx = b.x - camera.x;
+  const by = b.y - camera.y;
+
+  switch(b.type) {
+    case 'wall':
+      ctx.fillStyle = '#4a3a2a';
+      ctx.fillRect(bx - 18, by - 18, 36, 36);
+      ctx.fillStyle = '#5a4a3a';
+      ctx.fillRect(bx - 18, by - 18, 36, 5);
+      break;
+    case 'barbed':
+      ctx.strokeStyle = '#6a5a4a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = -20; i < 20; i += 6) {
+        ctx.moveTo(bx + i, by - 8);
+        ctx.lineTo(bx + i + 3, by + 8);
+      }
+      ctx.stroke();
+      break;
+    case 'mine':
+      if (!b.triggered) {
+        ctx.fillStyle = '#3a3020';
+        ctx.beginPath();
+        ctx.arc(bx, by, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#c02020';
+        ctx.beginPath();
+        ctx.arc(bx, by, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    case 'sentry':
+      ctx.fillStyle = '#3a3a4a';
+      ctx.fillRect(bx - 12, by - 12, 24, 24);
+      ctx.fillStyle = '#6a8aca';
+      ctx.beginPath();
+      ctx.arc(bx, by, 5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case 'medstation':
+      ctx.fillStyle = '#2a4a3a';
+      ctx.fillRect(bx - 15, by - 15, 30, 30);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(bx - 2, by - 8, 4, 16);
+      ctx.fillRect(bx - 8, by - 2, 16, 4);
+      break;
+    case 'ammobox':
+      ctx.fillStyle = '#4a3a20';
+      ctx.fillRect(bx - 14, by - 10, 28, 20);
+      ctx.fillStyle = '#6a5a30';
+      ctx.fillRect(bx - 14, by - 10, 28, 4);
+      break;
+    case 'turretPad':
+      ctx.fillStyle = '#3a3a3a';
+      ctx.beginPath(); ctx.arc(bx, by, 14, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#5a5a5a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      break;
+  }
+}
+
+// ==================== 射击逻辑 ====================
+function shoot() {
+  if (reloading) return;
+  if (magAmmo <= 0) { reloadWeapon(); return; }
+
+  const now = Date.now();
+  const stats = getWeaponStats(currentWeapon);
+  if (now - lastShot < stats.fireRate) return;
+
+  lastShot = now;
+  if (!cheats.infAmmo) magAmmo--;
+  const w = weapons[currentWeapon];
+  AudioSys[w.sound]();
+
+  const pellets = stats.pellets || 1;
+  for (let i = 0; i < pellets; i++) {
+    const spread = (Math.random() - 0.5) * stats.spread * 2;
+    bullets.push(new Bullet(
+      player.x + Math.cos(player.angle) * 22,
+      player.y + Math.sin(player.angle) * 22,
+      player.angle + spread,
+      stats.speed,
+      stats.damage,
+      stats.fire,
+      false,
+      stats.pierce,
+      stats.explosive
+    ));
+  }
+
+  for (let i = 0; i < 6; i++) {
+    particles.push(new Particle(
+      player.x + Math.cos(player.angle) * 26,
+      player.y + Math.sin(player.angle) * 26,
+      stats.fire ? '#ff6020' : '#ffc040',
+      Math.cos(player.angle + (Math.random() - 0.5) * 0.8) * (2 + Math.random() * 2),
+      Math.sin(player.angle + (Math.random() - 0.5) * 0.8) * (2 + Math.random() * 2),
+      10
+    ));
+  }
+
+  screenShake = stats.fire ? 2 : (stats.explosive ? 4 : 1.5);
+}
+
+function reloadWeapon() {
+  if (reloading) return;
+  const stats = getWeaponStats(currentWeapon);
+  if (magAmmo >= stats.mag) return;
+  if (resources.ammo < 1) { showToast('弹药不足！'); return; }
+
+  reloading = true;
+  AudioSys.reload();
+  showToast('换弹中...');
+
+  setTimeout(() => {
+    const need = stats.mag - magAmmo;
+    const take = Math.min(need, Math.floor(resources.ammo));
+    resources.ammo -= take;
+    magAmmo += take;
+    reloading = false;
+    showToast('换弹完成');
+  }, stats.reload);
+}
+
+// ==================== 波次系统 - 连续刷新优化版 ====================
+function startWave() {
+  waveActive = true;
+  waveSpawnComplete = false;
+  zombiesToSpawn = 10 + wave * 6 + (isBloodMoon ? wave * 4 : 0);
+  spawnTimer = 0;
+  AudioSys.waveStart();
+
+  const ann = document.getElementById('waveAnnounce');
+  ann.textContent = '第 ' + wave + ' 波' + (isBloodMoon ? ' · 血月' : '');
+  ann.style.opacity = 1;
+  ann.style.transform = 'translate(-50%, -50%) scale(1.2)';
+  setTimeout(() => {
+    ann.style.opacity = 0;
+    ann.style.transform = 'translate(-50%, -50%) scale(1)';
+  }, 2000);
+}
+
+function spawnZombie() {
+  const side = Math.floor(Math.random() * 4);
+  let x, y;
+  const margin = 200;
+
+  switch(side) {
+    case 0: x = camera.x - margin; y = camera.y + Math.random() * canvas.height; break;
+    case 1: x = camera.x + canvas.width + margin; y = camera.y + Math.random() * canvas.height; break;
+    case 2: x = camera.x + Math.random() * canvas.width; y = camera.y - margin; break;
+    case 3: x = camera.x + Math.random() * canvas.width; y = camera.y + canvas.height + margin; break;
+  }
+
+  x = Math.max(40, Math.min(MAP_W - 40, x));
+  y = Math.max(40, Math.min(MAP_H - 40, y));
+
+  let type = 'normal';
+  if (wave >= 3 && Math.random() < 0.25) type = 'fast';
+  if (wave >= 5 && Math.random() < 0.15) type = 'tank';
+  if (isBloodMoon && Math.random() < 0.2) type = 'tank';
+
+  zombies.push(new Zombie(x, y, type));
+}
+
+function spawnBoss() {
+  if (boss) return;
+  boss = new Boss(radiationZone.x, radiationZone.y);
+  boss.hp = LEVEL_CONFIG[currentLevel].bossHP * (1 + currentLevel * 0.5);
+  boss.maxHp = boss.hp;
+  bossSpawned = true;
+  if (musicOn) playBGM('boss');
+
+  const ann = document.getElementById('bossAnnounce');
+  ann.style.opacity = 1;
+  AudioSys.bossRoar();
+  screenShake = 20;
+
+  setTimeout(() => { ann.style.opacity = 0; }, 3000);
+  showToast('⚠️ 辐射巨兽苏醒了！');
+}
+
+// ==================== 昼夜系统 ====================
+function updateDayNight() {
+  dayNightTimer--;
+  
+  if (dayNightTimer <= 0) {
+    if (isDaytime) {
+      // 白天结束 → 进入夜晚，开始第一波
+      isDaytime = false;
+      dayCount++;
+      
+      // 每5天血月
+      isBloodMoon = (dayCount % 5 === 0);
+      
+      dayNightTimer = NIGHT_DURATION;
+      startWave(); // 夜晚开始立即启动第一波
+      
+      if (isBloodMoon) {
+        showDayNightAnnounce('🌑 血月降临', '#ff2020');
+        document.getElementById('nightOverlay').style.opacity = '0.7';
+        document.getElementById('bloodMoonOverlay').style.opacity = '1';
+        if (musicOn) playBGM('bloodmoon');
+        if (!bossSpawned) spawnBoss();
+      } else {
+        showDayNightAnnounce('🌙 夜幕降临', '#6080ff');
+        document.getElementById('nightOverlay').style.opacity = '1';
+        if (musicOn) playBGM('night');
+      }
+    } else {
+      // 夜晚结束 → 天亮，停止刷怪，清场
+      isDaytime = true;
+      isBloodMoon = false;
+      dayNightTimer = DAY_DURATION;
+      if (musicOn) playBGM('day');
+      waveActive = false;
+      waveSpawnComplete = false;
+      zombies = [];
+      wave++; // 波次继续累加
+      
+      document.getElementById('nightOverlay').style.opacity = '0';
+      document.getElementById('bloodMoonOverlay').style.opacity = '0';
+      
+      showDayNightAnnounce('☀ 黎明到来', '#ffd860');
+      showToast('天亮了！获得喘息时间');
+      
+      // 每日刷新物资
+      refreshSearchBuildings();
+    }
+    AudioSys.dayNight();
+  }
+  
+  // 核心优化：夜晚期间，一波打完立刻开下一波
+  if (!isDaytime && waveActive) {
+    // 当前波全部生成完毕 且 场上无僵尸 → 立刻开启下一波
+    if (waveSpawnComplete && zombies.length === 0 && (!boss || boss.hp <= 0)) {
+      wave++;
+      // 每5波升级关卡
+      if (wave % 5 === 0 && currentLevel < LEVEL_CONFIG.length - 1) {
+        currentLevel++;
+        levelCleared = true;
+        showDayNightAnnounce('关卡 ' + (currentLevel+1) + ': ' + LEVEL_CONFIG[currentLevel].name, '#ffd700');
+        generateMap();
+        base.x = MAP_W / 2; base.y = MAP_H / 2;
+        player.x = MAP_W / 2; player.y = MAP_H / 2 + 80;
+        playerBuildings = [];
+        searchBuildings = [];
+        bossSpawned = false;
+        boss = null;
+        startBGM(LEVEL_CONFIG[currentLevel].theme);
+        for (let i = 0; i < mercenaries.length; i++) mercenaries[i].hp = mercenaries[i].maxHp;
+        for (let i = 0; i < survivors.length; i++) survivors[i].hp = survivors[i].maxHp;
+      }
+      startWave();
+    }
+  }
+}
+
+function showDayNightAnnounce(text, color) {
+  const ann = document.getElementById('dayNightAnnounce');
+  ann.textContent = text;
+  ann.style.color = color;
+  ann.style.opacity = 1;
+  ann.style.transform = 'translate(-50%, -50%) scale(1.15)';
+  setTimeout(() => {
+    ann.style.opacity = 0;
+    ann.style.transform = 'translate(-50%, -50%) scale(1)';
+  }, 2500);
+}
+
+// ==================== UI 更新 ====================
+function updateUI() {
+  document.getElementById('hpBar').style.width = (player.hp / player.maxHp * 100) + '%';
+  document.getElementById('hpText').textContent = Math.ceil(player.hp) + ' / ' + player.maxHp;
+  document.getElementById('staminaBar').style.width = (player.stamina / player.maxStamina * 100) + '%';
+  document.getElementById('staminaText').textContent = '体力 ' + Math.floor(player.stamina);
+  document.getElementById('engineBar').style.width = (base.engineHp / base.maxEngineHp * 100) + '%';
+  document.getElementById('engineText').textContent = '发动机 ' + Math.floor(base.engineHp / base.maxEngineHp * 100) + '%';
+  document.getElementById('gateBar').style.width = (base.gateHp / base.gateMaxHp * 100) + '%';
+  document.getElementById('gateText').textContent = '大门 ' + Math.floor(base.gateHp / base.gateMaxHp * 100) + '%';
+
+  document.getElementById('foodRes').textContent = Math.floor(resources.food);
+  document.getElementById('partsRes').textContent = Math.floor(resources.parts);
+  document.getElementById('medsRes').textContent = Math.floor(resources.meds);
+  document.getElementById('ammoRes').textContent = Math.floor(resources.ammo);
+  document.getElementById('goldRes').textContent = Math.floor(resources.gold);
+  document.getElementById('crystalRes').textContent = resources.crystal;
+  document.getElementById('waveRes').textContent = wave;
+  document.getElementById('levelName').textContent = LEVEL_CONFIG[currentLevel].name;
+
+  // 昼夜显示
+  const dnInfo = document.getElementById('dayNightInfo');
+  const seconds = Math.ceil(dayNightTimer / 60);
+  if (isDaytime) {
+    dnInfo.className = 'dayNightInfo day';
+    dnInfo.innerHTML = '☀ 白天 · 第' + dayCount + '天 · 剩余 ' + seconds + 's';
+  } else if (isBloodMoon) {
+    dnInfo.className = 'dayNightInfo bloodmoon';
+    dnInfo.innerHTML = '🌑 血月 · 第' + dayCount + '天 · 剩余 ' + seconds + 's';
+  } else {
+    dnInfo.className = 'dayNightInfo night';
+    dnInfo.innerHTML = '🌙 夜晚 · 第' + dayCount + '天 · 剩余 ' + seconds + 's';
+  }
+}
+
+function drawPauseScreen() {
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font = 'bold 36px monospace'; ctx.fillStyle = '#FFF'; ctx.textAlign = 'center';
+  ctx.fillText('⏯ 暂停', canvas.width/2, canvas.height/2-20);
+  ctx.font = '16px monospace'; ctx.fillText('点击⏯按钮继续', canvas.width/2, canvas.height/2+30);
+}
+
+function renderWeaponBar() {
+  const bar = document.getElementById('weaponBar');
+  bar.innerHTML = '';
+
+  weaponOrder.forEach((key, idx) => {
+    const w = weapons[key];
+    if (w.hidden && !w.unlocked) return;
+
+    const slot = document.createElement('div');
+    slot.className = 'weaponSlot';
+    if (key === currentWeapon) slot.classList.add('active');
+    if (!w.unlocked) slot.classList.add('locked');
+
+    const stats = getWeaponStats(key);
+    slot.innerHTML = `
+      <span class="wKey">${idx + 1}</span>
+      <span class="wIcon">${w.icon}</span>
+      <span>${magAmmo}/${stats.mag}</span>
+    `;
+
+    slot.onclick = () => {
+      if (w.unlocked) {
+        currentWeapon = key;
+        const s = getWeaponStats(key);
+        magAmmo = Math.min(s.mag, Math.floor(resources.ammo));
+        reloading = false;
+        renderWeaponBar();
+      }
+    };
+
+    bar.appendChild(slot);
+  });
+}
+
+// ==================== 基地面板 ====================
+function toggleBasePanel() {
+  const p = document.getElementById('basePanel');
+  if (p.style.display === 'block') p.style.display = 'none';
+  else { renderBasePanel(); p.style.display = 'block'; }
+}
+
+function renderBasePanel() {
+  const cont = document.getElementById('baseUpgrades');
+  cont.innerHTML = '';
+
+  baseUpgrades.forEach(up => {
+    const lv = baseLevels[up.id];
+    const maxed = lv >= up.maxLevel;
+    const cost = maxed ? 0 : up.getCost(lv);
+    const canAfford = resources.parts >= cost;
+
+    const row = document.createElement('div');
+    row.className = 'upgradeRow';
+    row.innerHTML = `
+      <div class="upInfo">
+        <div class="upName">${up.name} <span style="color:#666;font-size:9px;">Lv.${lv}/${up.maxLevel}</span></div>
+        <div class="upDesc">${up.desc}</div>
+      </div>
+      <div style="display:flex;align-items:center;">
+        <span class="upCost">${maxed ? '已满级' : cost + ' 零件'}</span>
+        <button class="upBtn" ${(maxed || !canAfford) ? 'disabled' : ''}>升级</button>
+      </div>
+    `;
+
+    row.querySelector('.upBtn').onclick = () => {
+      if (maxed || resources.parts < cost) return;
+      resources.parts -= cost;
+      baseLevels[up.id]++;
+      up.apply(baseLevels[up.id]);
+      AudioSys.upgrade();
+      showToast(up.name + ' → Lv.' + baseLevels[up.id]);
+      renderBasePanel();
+    };
+
+    cont.appendChild(row);
+  });
+
+  // 炮台建造
+  const turretCont = document.getElementById('turretBuild');
+  turretCont.innerHTML = '';
+
+  for (let i = 0; i < base.turretSlots; i++) {
+    const t = base.turrets[i];
+    const slot = document.createElement('div');
+    slot.className = 'buildItem';
+
+    if (t) {
+      const type = turretTypes[t.type];
+      slot.innerHTML = `
+        <div class="bIcon">${type.icon}</div>
+        <div class="bName">${type.name}</div>
+        <div class="bPrice">已建造 #${i + 1}</div>
+      `;
+    } else {
+      slot.innerHTML = `
+        <div class="bIcon">➕</div>
+        <div class="bName">炮台位 #${i + 1}</div>
+        <div class="bPrice">30零件起</div>
+      `;
+      slot.onclick = () => {
+        if (resources.parts < 30) { showToast('零件不足'); return; }
+        resources.parts -= 30;
+        base.buildTurret(i, 'machinegun');
+        showToast('建造机枪塔！');
+        renderBasePanel();
+      };
+    }
+
+    turretCont.appendChild(slot);
+  }
+}
+
+// ==================== 建筑系统 ====================
+function toggleBuildPanel() {
+  const p = document.getElementById('buildPanel');
+  if (p.style.display === 'block') p.style.display = 'none';
+  else { renderBuildPanel(); p.style.display = 'block'; }
+}
+
+function renderBuildPanel() {
+  const grid = document.getElementById('buildGrid');
+  grid.innerHTML = '';
+
+  let buildLimit = 15;
+  if (membership === 'svip') buildLimit = 30;
+  if (membership === 'svipPlus') buildLimit = 50;
+
+  for (let key in buildingTypes) {
+    const b = buildingTypes[key];
+    const item = document.createElement('div');
+    item.className = 'buildItem';
+    item.innerHTML = `
+      <div class="bIcon">${b.icon}</div>
+      <div class="bName">${b.name}</div>
+      <div class="bDesc">${b.desc}</div>
+      <div class="bPrice">${b.cost} 零件</div>
+    `;
+
+    item.onclick = () => {
+      if (playerBuildings.length >= buildLimit) {
+        showToast('建筑数量已达上限 (' + buildLimit + ')');
+        return;
+      }
+      if (resources.parts < b.cost) { showToast('零件不足'); return; }
+
+      resources.parts -= b.cost;
+
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 180 + Math.random() * 100;
+      const bx = base.x + Math.cos(angle) * dist;
+      const by = base.y + Math.sin(angle) * dist;
+
+      playerBuildings.push({
+        type: key,
+        x: bx,
+        y: by,
+        hp: b.hp || 100,
+        triggered: false
+      });
+
+      AudioSys.build();
+      showToast('建造 ' + b.name + '！');
+      renderBuildPanel();
+    };
+
+    grid.appendChild(item);
+  }
+}
+
+// ==================== 枪械升级 ====================
+function toggleWeaponUpgrade() {
+  const p = document.getElementById('weaponUpgradePanel');
+  if (p.style.display === 'block') p.style.display = 'none';
+  else { renderWeaponUpgrade(); p.style.display = 'block'; }
+}
+
+function renderWeaponUpgrade() {
+  const list = document.getElementById('weaponUpgradeList');
+  list.innerHTML = '';
+
+  weaponOrder.forEach(key => {
+    const w = weapons[key];
+    if (!w.unlocked) return;
+
+    const card = document.createElement('div');
+    card.className = 'weaponUpgradeCard';
+
+    const stats = getWeaponStats(key);
+    const lv = w.levels;
+
+    const upgradeCost = (type) => 20 + lv[type] * 15;
+
+    card.innerHTML = `
+      <div class="wuHeader">
+        <span class="wuName">${w.icon} ${w.name}</span>
+        <span class="wuLevel">伤害Lv${lv.damage} · 射速Lv${lv.fireRate}</span>
+      </div>
+      <div class="wuStats">
+        <span>伤害: ${Math.floor(stats.damage)}</span>
+        <span>射速: ${Math.round(1000 / stats.fireRate)}/秒</span>
+        <span>弹匣: ${stats.mag}</span>
+        <span>散布: ${(stats.spread * 100).toFixed(1)}%</span>
+      </div>
+      <div class="wuBtns">
+        <button class="wuBtn" data-type="damage">伤害+15% (${upgradeCost('damage')}金)</button>
+        <button class="wuBtn" data-type="fireRate">射速+10% (${upgradeCost('fireRate')}金)</button>
+        <button class="wuBtn" data-type="mag">弹匣+20% (${upgradeCost('mag')}金)</button>
+        <button class="wuBtn" data-type="spread">精准+12% (${upgradeCost('spread')}金)</button>
+      </div>
+    `;
+
+    card.querySelectorAll('.wuBtn').forEach(btn => {
+      const type = btn.dataset.type;
+      const cost = upgradeCost(type);
+      const maxed = lv[type] >= 10;
+
+      if (maxed) {
+        btn.textContent = type + ' 已满级';
+        btn.disabled = true;
+      }
+
+      btn.onclick = () => {
+        if (maxed) return;
+        if (resources.gold < cost) { showToast('金币不足'); return; }
+
+        resources.gold -= cost;
+        w.levels[type]++;
+        AudioSys.upgrade();
+        showToast(w.name + ' ' + type + ' 升级！');
+
+        if (type === 'mag') {
+          const s = getWeaponStats(key);
+          if (currentWeapon === key) {
+            magAmmo = Math.min(s.mag, magAmmo + Math.floor(s.mag * 0.2));
+          }
+        }
+
+        renderWeaponUpgrade();
+        renderWeaponBar();
+      };
+    });
+
+    list.appendChild(card);
+  });
+}
+
+// ==================== 抽奖系统 ====================
+function toggleGacha() {
+  const p = document.getElementById('gachaPanel');
+  if (p.style.display === 'block') p.style.display = 'none';
+  else p.style.display = 'block';
+}
+
+function doGacha() {
+  let price = 50;
+  if (membership === 'svip') price = 40;
+  if (membership === 'svipPlus') price = 35;
+  
+  if (resources.gold < price) { showToast('金币不足'); return; }
+
+  resources.gold -= price;
+  AudioSys.gachaRoll();
+
+  const display = document.getElementById('gachaDisplay');
+  display.textContent = '🎲';
+  display.style.color = '#fff';
+  display.style.textShadow = 'none';
+
+  let rollCount = 0;
+  const rollInterval = setInterval(() => {
+    const icons = ['🔫', '💥', '🎯', '🔥', '💣', '⚡', '💰', '🔧', '🧪', '📦', '💎'];
+    display.textContent = icons[Math.floor(Math.random() * icons.length)];
+    rollCount++;
+    if (rollCount >= 15) {
+      clearInterval(rollInterval);
+      finishGacha();
+    }
+  }, 80);
+}
+
+function finishGacha() {
+  const display = document.getElementById('gachaDisplay');
+  let rareMult = 1;
+  if (membership === 'svip') rareMult = 2;
+  if (membership === 'svipPlus') rareMult = 3;
+
+  const roll = Math.random() * 100;
+  let result = { type: '', icon: '', text: '' };
+
+  // 普通奖励 70%
+  if (roll < 70) {
+    if (roll < 20 * rareMult * 0.5) {
+      const amount = 80 + Math.floor(Math.random() * 120);
+      resources.gold += amount;
+      result = { type: 'rare', icon: '💰', text: '+' + amount + ' 金币' };
+    } else if (roll < 35 * rareMult * 0.7) {
+      const amount = 30 + Math.floor(Math.random() * 50);
+      resources.parts += amount;
+      result = { type: 'rare', icon: '🔧', text: '+' + amount + ' 零件' };
+    } else {
+      const types = ['food', 'ammo', 'meds'];
+      const t = types[Math.floor(Math.random() * types.length)];
+      const amount = 20 + Math.floor(Math.random() * 30);
+      resources[t] += amount;
+      const names = { food: '食物', ammo: '弹药', meds: '药品' };
+      result = { type: 'normal', icon: '📦', text: '+' + amount + ' ' + names[t] };
+    }
+  }
+  // 史诗奖励
+  else if (roll < 92) {
+    const epicPool = [
+      () => { resources.gold += 300; return { icon: '💰', text: '+300 金币' }; },
+      () => { resources.parts += 150; return { icon: '🔧', text: '+150 零件' }; },
+      () => { resources.crystal += 2; return { icon: '💎', text: '+2 水晶' }; },
+      () => {
+        if (!weapons.shotgun.unlocked) {
+          weapons.shotgun.unlocked = true;
+          renderWeaponBar();
+          return { icon: '💥', text: '解锁 霰弹枪！' };
+        }
+        resources.gold += 200;
+        return { icon: '💰', text: '+200 金币' };
+      }
+    ];
+    result = epicPool[Math.floor(Math.random() * epicPool.length)]();
+    result.type = 'epic';
+  }
+  // 传说奖励
+  else {
+    const legendPool = [
+      () => {
+        if (!weapons.laserRifle.unlocked) {
+          weapons.laserRifle.unlocked = true;
+          renderWeaponBar();
+          return { icon: '⚡', text: '传说：解锁激光步枪！' };
+        }
+        resources.crystal += 10;
+        return { icon: '💎', text: '+10 水晶' };
+      },
+      () => {
+        if (!weapons.railgun.unlocked) {
+          weapons.railgun.unlocked = true;
+          renderWeaponBar();
+          return { icon: '⚡', text: '隐藏武器：电磁轨道炮！' };
+        }
+        resources.gold += 1000;
+        return { icon: '💰', text: '+1000 金币' };
+      },
+      () => {
+        if (survivors.length < getSurvivorLimit()) {
+          survivors.push(new Survivor(player.x, player.y, 'elite'));
+          return { icon: '⭐', text: '获得精英特种兵！' };
+        }
+        resources.parts += 300;
+        return { icon: '🔧', text: '+300 零件' };
+      }
+    ];
+    result = legendPool[Math.floor(Math.random() * legendPool.length)]();
+    result.type = 'legend';
+  }
+
+  display.textContent = result.icon;
+  AudioSys.gachaWin();
+  showToast(result.text);
+
+  if (result.type === 'epic') display.style.color = '#a060ff';
+  else if (result.type === 'legend') {
+    display.style.color = '#ffd060';
+    display.style.textShadow = '0 0 20px rgba(255,208,96,0.8)';
+  } else display.style.color = '#fff';
+}
+
+// ==================== 幸存者系统 ====================
+function getSurvivorLimit() {
+  let limit = 4;
+  if (membership === 'vip') limit += 3;
+  if (membership === 'svip') limit += 6;
+  if (membership === 'svipPlus') limit += 12;
+  return limit;
+}
+
+function toggleSurvivors() {
+  const p = document.getElementById('survivorPanel');
+  if (p.style.display === 'block') p.style.display = 'none';
+  else { renderSurvivors(); p.style.display = 'block'; }
+}
+
+function renderSurvivors() {
+  const list = document.getElementById('survivorList');
+  list.innerHTML = '';
+
+  if (survivors.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#555;padding:20px;font-size:11px;">暂无幸存者<br>去废弃房屋搜索或招募吧</div>';
+  }
+
+  survivors.forEach((s, idx) => {
+    const card = document.createElement('div');
+    card.className = 'survivorCard' + (s.type === 'elite' ? ' elite' : '');
+    const typeNames = { soldier: '士兵', heavy: '重装', sniper: '狙击手', elite: '特种兵' };
+    card.innerHTML = `
+      <div class="sAvatar">${s.type === 'elite' ? '⭐' : '👤'}</div>
+      <div class="sInfo">
+        <div class="sName">${s.name}</div>
+        <div class="sStats">${typeNames[s.type]} · 伤害${Math.floor(s.damage)} · 射程${s.range}</div>
+        <div class="sHpBar"><div class="sHpFill" style="width:${(s.hp/s.maxHp)*100}%"></div></div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  const btn = document.getElementById('recruitBtn');
+  btn.disabled = survivors.length >= getSurvivorLimit();
+  btn.textContent = survivors.length >= getSurvivorLimit()
+    ? '已达上限 (' + survivors.length + '/' + getSurvivorLimit() + ')'
+    : '🔍 招募幸存者 (消耗 10 食物)';
+}
+
+function recruitSurvivor() {
+  if (survivors.length >= getSurvivorLimit()) { showToast('幸存者已达上限'); return; }
+  if (resources.food < 10) { showToast('食物不足'); return; }
+
+  resources.food -= 10;
+  const types = ['soldier', 'heavy', 'sniper'];
+  const t = types[Math.floor(Math.random() * types.length)];
+  survivors.push(new Survivor(base.x + (Math.random()-0.5)*100, base.y + 80, t));
+  AudioSys.pickup();
+  showToast('招募了一名新幸存者！');
+  renderSurvivors();
+}
+
+// ==================== 雇佣兵系统 ====================
+function toggleMercenaries() {
+  const p = document.getElementById('mercenaryPanel');
+  if (p.style.display === 'block') p.style.display = 'none';
+  else { renderMercenaries(); p.style.display = 'block'; }
+}
+
+function renderMercenaries() {
+  const list = document.getElementById('mercenaryList');
+  list.innerHTML = '';
+
+  if (mercenaries.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#555;padding:20px;font-size:11px;">暂无雇佣兵<br>雇佣战士跟随你外出作战</div>';
+  }
+
+  mercenaries.forEach((m, idx) => {
+    const card = document.createElement('div');
+    card.className = 'survivorCard mercenary';
+    const typeNames = { assault: '突击手', sniper: '狙击手', heavy: '重装兵' };
+    card.innerHTML = `
+      <div class="sAvatar">⚔️</div>
+      <div class="sInfo">
+        <div class="sName">${m.name}</div>
+        <div class="sStats">${typeNames[m.type]} · 伤害${Math.floor(m.damage)} · 射程${m.range}</div>
+        <div class="sHpBar"><div class="sHpFill" style="width:${(m.hp/m.maxHp)*100}%"></div></div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  const btn = document.getElementById('hireMercBtn');
+  const maxMerc = membership === 'svipPlus' ? 5 : 3;
+  btn.disabled = mercenaries.length >= maxMerc;
+  btn.textContent = mercenaries.length >= maxMerc
+    ? '已达上限 (' + mercenaries.length + '/' + maxMerc + ')'
+    : '⚔️ 雇佣精英战士 (200金币/天)';
+}
+
+function hireMercenary() {
+  const maxMerc = membership === 'svipPlus' ? 5 : 3;
+  if (mercenaries.length >= maxMerc) { showToast('雇佣兵已达上限'); return; }
+  if (resources.gold < 200) { showToast('金币不足'); return; }
+
+  resources.gold -= 200;
+  const types = ['assault', 'sniper', 'heavy'];
+  const t = types[Math.floor(Math.random() * types.length)];
+  mercenaries.push(new Mercenary(player.x, player.y, t));
+  AudioSys.pickup();
+  showToast('雇佣了一名雇佣兵！');
+  renderMercenaries();
+}
+
+// ==================== 搜索面板 ====================
+function openSearch() {
+  if (!nearInteractable || nearInteractable.type !== 'building') return;
+  const p = document.getElementById('searchPanel');
+  renderSearchRooms(nearInteractable.target);
+  p.style.display = 'block';
+}
+
+function closeSearch() {
+  document.getElementById('searchPanel').style.display = 'none';
+}
+
+function renderSearchRooms(building) {
+  const cont = document.getElementById('searchRooms');
+  cont.innerHTML = '';
+
+  building.rooms.forEach((room, idx) => {
+    const div = document.createElement('div');
+    div.className = 'searchRoom' + (room.searched ? ' searched' : '');
+    div.innerHTML = `
+      <div class="rIcon">${room.icon}</div>
+      <div class="rName">${room.name}</div>
+      <div style="font-size:9px;color:${room.searched ? '#555' : '#888'};margin-top:3px;">
+        ${room.searched ? '已搜索' : '点击搜索'}
+      </div>
+    `;
+
+    if (!room.searched) {
+      div.onclick = () => {
+        const result = building.searchRoom(idx);
+        if (result) {
+          if (result.type === 'danger') {
+            showToast('⚠️ ' + result.msg);
+          } else if (result.type === 'survivor') {
+            showToast('🎉 ' + result.msg);
+          } else {
+            const items = [];
+            const names = { food: '食物', parts: '零件', meds: '药品', ammo: '弹药', gold: '金币', crystal: '水晶' };
+            for (let k in result.data) items.push(names[k] + ' x' + result.data[k]);
+            showToast('🎁 ' + items.join('，'));
+          }
+        }
+        renderSearchRooms(building);
+      };
+    }
+
+    cont.appendChild(div);
+  });
+}
+
+// ==================== 商店系统 ====================
+function toggleShop() {
+  const p = document.getElementById('shopPanel');
+  if (p.style.display === 'block') p.style.display = 'none';
+  else { renderShop(); p.style.display = 'block'; }
+}
+
+function renderShop() {
+  // 武器区
+  const wCont = document.getElementById('shopWeapons');
+  wCont.innerHTML = '';
+
+  weaponOrder.forEach(key => {
+    const w = weapons[key];
+    if (w.hidden) return;
+    if (w.unlocked) return;
+
+    const item = document.createElement('div');
+    item.className = 'shopItem';
+    let tag = '';
+    if (w.vip === 'vip') tag = '<span class="sTag vipTag">VIP</span>';
+    if (w.vip === 'svip') tag = '<span class="sTag svipTag">SVIP</span>';
+    if (w.vip === 'svipPlus') tag = '<span class="sTag svipplusTag">SVIP+</span>';
+
+    const canBuy = !w.vip || (w.vip === 'vip' && membership !== 'none') || 
+                   (w.vip === 'svip' && (membership === 'svip' || membership === 'svipPlus')) ||
+                   (w.vip === 'svipPlus' && membership === 'svipPlus');
+
+    if (!canBuy) item.classList.add('locked');
+
+    item.innerHTML = `
+      ${tag}
+      <div class="sName">${w.icon} ${w.name}</div>
+      <div class="sDesc">伤害${w.baseDamage} · 射速${Math.round(1000/w.baseFireRate)}/s</div>
+      <div class="sPrice">${w.price} 金币</div>
+    `;
+
+    item.onclick = () => {
+      if (!canBuy) { showToast('需要对应会员等级'); return; }
+      if (resources.gold < w.price) { showToast('金币不足'); return; }
+      resources.gold -= w.price;
+      w.unlocked = true;
+      AudioSys.upgrade();
+      showToast('解锁 ' + w.name + '！');
+      renderShop();
+      renderWeaponBar();
+    };
+
+    wCont.appendChild(item);
+  });
+
+  // 道具区
+  const iCont = document.getElementById('shopItems');
+  const items = [
+    { id: 'medkit', name: '医疗包', icon: '🩹', desc: '回复50点生命', price: 30, effect: () => { player.hp = Math.min(player.maxHp, player.hp + 50); } },
+    { id: 'ammobox', name: '弹药箱', icon: '📦', desc: '获得100发弹药', price: 40, effect: () => { resources.ammo += 100; } },
+    { id: 'repair', name: '修复套件', icon: '🔧', desc: '修复所有窗户+大门', price: 80, effect: () => {
+        base.windows.forEach(w => w.hp = w.maxHp);
+        base.gateHp = base.gateMaxHp;
+      }
+    },
+    { id: 'stim', name: '兴奋剂', icon: '💉', desc: '30秒提升移速射速', price: 60, effect: () => {
+        player.speed *= 1.5;
+        setTimeout(() => player.speed /= 1.5, 30000);
+      }
+    },
+    { id: 'radshield', name: '辐射防护剂', icon: '☢️', desc: '30秒免疫辐射伤害', price: 120, effect: () => {
+        player.radiationTimer = -1800;
+        showToast('辐射免疫激活30秒');
+      }
+    }
+  ];
+
+  iCont.innerHTML = '';
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'shopItem';
+    div.innerHTML = `
+      <div class="sName">${item.icon} ${item.name}</div>
+      <div class="sDesc">${item.desc}</div>
+      <div class="sPrice">${item.price} 金币</div>
+    `;
+
+    div.onclick = () => {
+      if (resources.gold < item.price) { showToast('金币不足'); return; }
+      resources.gold -= item.price;
+      item.effect();
+      AudioSys.pickup();
+      showToast('购买 ' + item.name + '！');
+    };
+
+    iCont.appendChild(div);
+  });
+}
+
+// ==================== VIP系统 ====================
+function openVip() {
+  document.getElementById('vipPanel').style.display = 'block';
+}
+
+function closeVip() {
+  document.getElementById('vipPanel').style.display = 'none';
+}
+
+function buyVip(type) {
+  if (membership === type) { showToast('您已开通该会员'); return; }
+  
+  membership = type;
+  applyVipBenefits(type);
+  AudioSys.upgrade();
+  
+  const badge = document.getElementById('vipBadge');
+  badge.style.display = 'block';
+  badge.className = '';
+  
+  if (type === 'vip') {
+    badge.textContent = '✦ VIP 精英 ✦';
+    badge.classList.add('badge-vip');
+    showToast('🎉 开通VIP精英！');
+  } else if (type === 'svip') {
+    badge.textContent = '✦ SVIP 主宰 ✦';
+    badge.classList.add('badge-svip');
+    showToast('🎉 开通SVIP主宰！');
+  } else if (type === 'svipPlus') {
+    badge.textContent = '✦ SVIP+ 至尊 ✦';
+    badge.classList.add('badge-svipplus');
+    showToast('🎉 开通SVIP+至尊！赠送500零件！');
+  }
+  
+  closeVip();
+  renderWeaponBar();
+  renderSurvivors();
+  renderMercenaries();
+}
+
+function applyVipBenefits(type) {
+  if (type === 'vip') {
+    resources.gold += 500;
+    player.maxStamina += 50;
+    player.stamina = player.maxStamina;
+    inventory.capacity += 12;
+    revives += 3;
+    weapons.smg.unlocked = true;
+    weapons.rifle.unlocked = true;
+  } else if (type === 'svip') {
+    resources.gold += 1200;
+    player.maxHp += 100;
+    player.hp = player.maxHp;
+    player.maxStamina += 80;
+    player.stamina = player.maxStamina;
+    inventory.capacity += 20;
+    revives += 8;
+    base.autoRepair = true;
+    weapons.smg.unlocked = true;
+    weapons.rifle.unlocked = true;
+    weapons.shotgun.unlocked = true;
+    weapons.sniper.unlocked = true;
+    weapons.flamethrower.unlocked = true;
+    weapons.grenadeLauncher.unlocked = true;
+  } else if (type === 'svipPlus') {
+    resources.gold += 3000;
+    resources.food += 200;
+    resources.parts += 500;  // SVIP+ 赠送500零件
+    resources.ammo += 700;
+    resources.meds += 100;
+    player.maxHp += 200;
+    player.hp = player.maxHp;
+    player.maxStamina += 120;
+    player.stamina = player.maxStamina;
+    inventory.capacity += 30;
+    revives += 20;
+    base.autoRepair = true;
+    base.repairSpeed = 3;
+    // 全武器解锁
+    for (let k in weapons) weapons[k].unlocked = true;
+    // 全武器满级
+    for (let k in weapons) {
+      weapons[k].levels = { damage: 10, fireRate: 10, mag: 10, spread: 10 };
+    }
+    // 赠送3名精英特种兵
+    for (let i = 0; i < 3; i++) {
+      survivors.push(new Survivor(base.x, base.y, 'elite'));
+    }
+    // 赠送2名免费雇佣兵
+    for (let i = 0; i < 2; i++) {
+      mercenaries.push(new Mercenary(base.x, base.y, 'assault'));
+    }
+    // 窗户血量翻倍
+    base.windows.forEach(w => {
+      w.maxHp *= 2;
+      w.hp = w.maxHp;
+    });
+  }
+}
+
+// ==================== Toast提示 ====================
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = 1;
+  
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.style.opacity = 0;
+  }, 2000);
+}
+
+// ==================== 主游戏循环 ====================
+function gameLoop() {
+  requestAnimationFrame(gameLoop);
+  if (!gameRunning) return;
+  if (pauseGame) { drawPauseScreen(); return; }
+
+  // 逻辑更新
+  player.update();
+  base.update();
+  updateDayNight();
+
+  // 波次生成
+  if (waveActive && zombiesToSpawn > 0) {
+    spawnTimer++;
+    const spawnRate = isBloodMoon ? 25 : 45;
+    if (spawnTimer >= spawnRate) {
+      spawnTimer = 0;
+      spawnZombie();
+      zombiesToSpawn--;
+      if (zombiesToSpawn <= 0) waveSpawnComplete = true;
+    }
+  }
+
+  // 更新僵尸
+  for (let i = zombies.length - 1; i >= 0; i--) {
+    if (!zombies[i].update()) zombies.splice(i, 1);
+  }
+
+  // 更新Boss
+  if (boss) {
+    if (!boss.update()) { boss = null; if (musicOn) playBGM(isDaytime ? 'day' : (isBloodMoon ? 'bloodmoon' : 'night')); }
+  }
+
+  // 更新子弹
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    if (!bullets[i].update()) bullets.splice(i, 1);
+  }
+
+  // 更新粒子
+  for (let i = particles.length - 1; i >= 0; i--) {
+    if (!particles[i].update()) particles.splice(i, 1);
+  }
+
+  // 更新拾取物
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    if (!pickups[i].update()) pickups.splice(i, 1);
+  }
+
+  // 更新幸存者
+  for (let i = survivors.length - 1; i >= 0; i--) {
+    if (!survivors[i].update()) {
+      showToast('💀 一名幸存者阵亡了');
+      survivors.splice(i, 1);
+    }
+  }
+
+  // 更新雇佣兵
+  for (let i = mercenaries.length - 1; i >= 0; i--) {
+    if (!mercenaries[i].update()) {
+      showToast('💀 一名雇佣兵阵亡了');
+      mercenaries.splice(i, 1);
+    }
+  }
+
+  // 新增系统更新
+  autoAimUpdate();
+  updateTraps();
+  updateVehicles();
+  updateAirdrops();
+  updateDrone();
+  updateRescueTargets();
+  updateWeather();
+  if (Math.random() < 0.0008) randomWeather();
+  if (Math.random() < 0.0005) spawnAirdrop();
+  if (rescueTargets.length === 0 && Math.random() < 0.001) spawnRescueTarget();
+  if (zombies.length > 0 && zombies.filter(z=>z.hp>0).length > 0 && Math.random() < 0.003 && !zombies.some(z=>z.elite)) {
+    const alive = zombies.filter(z=>z.hp>0);
+    const z = alive[Math.floor(Math.random()*alive.length)];
+    if (!z.elite) spawnElite(z.x + Math.random()*60, z.y + Math.random()*60);
+  }
+  if (cheats.infResources) {
+    resources.food = 999; resources.parts = 999; resources.meds = 999;
+    resources.ammo = 9999; resources.gold = 99999; resources.crystal = 999;
+  }
+
+  // 相机跟随
+  camera.x = player.x - canvas.width / 2;
+  camera.y = player.y - canvas.height / 2;
+  camera.x = Math.max(0, Math.min(MAP_W - canvas.width, camera.x));
+  camera.y = Math.max(0, Math.min(MAP_H - canvas.height, camera.y));
+
+  // 屏幕震动
+  if (screenShake > 0) {
+    camera.x += (Math.random() - 0.5) * screenShake;
+    camera.y += (Math.random() - 0.5) * screenShake;
+    screenShake *= 0.85;
+    if (screenShake < 0.3) screenShake = 0;
+  }
+
+  // 渲染层级
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawMap();
+  
+  for (let b of searchBuildings) b.draw();
+  base.draw();
+  
+  for (let p of pickups) p.draw();
+  for (let z of zombies) z.draw();
+  if (boss) boss.draw();
+  
+  for (let s of survivors) s.draw();
+  for (let m of mercenaries) m.draw();
+  player.draw();
+  
+  for (let b of bullets) b.draw();
+  for (let p of particles) p.draw();
+  for (let v of vehicles) v.draw(ctx, camera);
+  for (let a of airdrops) { if (!a.looted) { const sx=a.x-camera.x, sy=a.y-camera.y; ctx.fillStyle='#FF0'; ctx.fillRect(sx-8,sy-8,16,16); ctx.fillStyle='#FFF'; ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillText('📦',sx,sy-12); } }
+  for (let t of traps) { const sx=t.x-camera.x, sy=t.y-camera.y; const def=TRAP_TYPES[t.type]; ctx.fillStyle=def.color; ctx.beginPath(); ctx.arc(sx,sy,6,0,Math.PI*2); ctx.fill(); }
+  for (let rt of rescueTargets) { if(!rt.rescued){const sx=rt.x-camera.x,sy=rt.y-camera.y;ctx.fillStyle='#0F0';ctx.beginPath();ctx.arc(sx,sy,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='#FFF';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('🆘',sx,sy-12);} }
+  if (combatDrone) { const sx=combatDrone.x-camera.x,sy=combatDrone.y-camera.y; ctx.fillStyle='#0ff';ctx.beginPath();ctx.arc(sx,sy,8,0,Math.PI*2);ctx.fill();ctx.fillText('🤖',sx,sy-12); }
+
+  drawMinimap();
+  updateUI();
+}
+
+function drawMinimap() {
+  const mw = 160, mh = 120;
+  const mx = canvas.width - mw - 20;
+  const my = canvas.height - mh - 20;
+  const scale = mw / MAP_W;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(mx, my, mw, mh);
+  ctx.strokeStyle = '#3a3020';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mx, my, mw, mh);
+
+  // 基地标记
+  ctx.fillStyle = '#d4b860';
+  ctx.fillRect(mx + base.x * scale - 3, my + base.y * scale - 3, 6, 6);
+
+  // 辐射区
+  ctx.fillStyle = 'rgba(0, 255, 100, 0.3)';
+  ctx.beginPath();
+  ctx.arc(mx + radiationZone.x * scale, my + radiationZone.y * scale, radiationZone.radius * scale, 0, Math.PI*2);
+  ctx.fill();
+
+  // 僵尸点
+  ctx.fillStyle = '#c02020';
+  for (let z of zombies) {
+    ctx.fillRect(mx + z.x * scale - 1, my + z.y * scale - 1, 2, 2);
+  }
+
+  // Boss点
+  if (boss) {
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(mx + boss.x * scale - 3, my + boss.y * scale - 3, 6, 6);
+  }
+
+  // 玩家点
+  ctx.fillStyle = '#40ff40';
+  ctx.fillRect(mx + player.x * scale - 2, my + player.y * scale - 2, 4, 4);
+
+  // 视野框
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.strokeRect(
+    mx + camera.x * scale,
+    my + camera.y * scale,
+    canvas.width * scale,
+    canvas.height * scale
+  );
+}
+
+// ==================== 事件监听 ====================
+// ==================== 手机触屏输入系统 ====================
+let mobileShooting = false;
+let mobileJoystick = { active: false, id: null, baseX: 0, baseY: 0, dx: 0, dy: 0 };
+let weaponIdx = 0;
+let pauseGame = false;
+
+function togglePause() {
+  pauseGame = !pauseGame;
+  showToast(pauseGame ? '⏯ 暂停' : '▶ 继续');
+  if (!pauseGame && !gameRunning) startGame();
+  if (pauseGame) { stopBGM(); } else if (musicOn) { startBGM(isDaytime?'day':isBloodMoon?'bloodmoon':'night'); }
+}
+
+// 设置按钮面板快捷键（手机版）
+function toggleBasePanel() { showToast('🏠 基地面板'); }
+function toggleBuildPanel() { showToast('🏗️ 建造面板'); }
+function toggleWeaponUpgrade() { showToast('🔫 武器升级'); }
+function toggleGacha() { showToast('🎰 抽奖'); }
+function toggleSurvivors() { showToast('👥 幸存者'); }
+function toggleMercenaries() { showToast('⚔️ 雇佣兵'); }
+function toggleShop() { showToast('🛒 商店'); }
+
+// 虚拟摇杆
+const joystickZone = document.getElementById('joystickZone');
+const joystickThumb = document.getElementById('joystickThumb');
+const jBase = document.getElementById('joystickBase');
+
+joystickZone.addEventListener('touchstart', e => {
+  e.preventDefault(); e.stopPropagation();
+  for (const t of e.changedTouches) {
+    if (!mobileJoystick.active) {
+      mobileJoystick.active = true; mobileJoystick.id = t.identifier;
+      const r = joystickZone.getBoundingClientRect();
+      mobileJoystick.baseX = r.left + r.width/2;
+      mobileJoystick.baseY = r.top + r.height/2;
+      updateJoystickPos(t.clientX, t.clientY);
+    }
+  }
+}, { passive: false });
+
+joystickZone.addEventListener('touchmove', e => {
+  e.preventDefault(); e.stopPropagation();
+  for (const t of e.changedTouches) {
+    if (t.identifier === mobileJoystick.id) updateJoystickPos(t.clientX, t.clientY);
+  }
+}, { passive: false });
+
+joystickZone.addEventListener('touchend', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === mobileJoystick.id) {
+      mobileJoystick.active = false; mobileJoystick.id = null;
+      mobileJoystick.dx = 0; mobileJoystick.dy = 0;
+      joystickThumb.style.transform = 'translate(-50%,-50%)';
+      keys['w'] = keys['s'] = keys['a'] = keys['d'] = false;
+    }
+  }
+});
+
+function updateJoystickPos(cx, cy) {
+  const dx = cx - mobileJoystick.baseX;
+  const dy = cy - mobileJoystick.baseY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const maxR = 50;
+  const clampedDx = dist > maxR ? (dx/dist)*maxR : dx;
+  const clampedDy = dist > maxR ? (dy/dist)*maxR : dy;
+  mobileJoystick.dx = clampedDx / maxR;
+  mobileJoystick.dy = clampedDy / maxR;
+  joystickThumb.style.transform = `translate(calc(-50% + ${clampedDx}px), calc(-50% + ${clampedDy}px))`;
+  keys['w'] = mobileJoystick.dy < -0.25;
+  keys['s'] = mobileJoystick.dy > 0.25;
+  keys['a'] = mobileJoystick.dx < -0.25;
+  keys['d'] = mobileJoystick.dx > 0.25;
+}
+
+// 射击按钮
+const btnShoot = document.getElementById('btnShoot');
+btnShoot.addEventListener('touchstart', e => { e.preventDefault(); mobileShooting = true; if (gameRunning && !reloading) shootMobile(); });
+btnShoot.addEventListener('touchend', e => { e.preventDefault(); mobileShooting = false; });
+btnShoot.addEventListener('touchcancel', e => { mobileShooting = false; });
+
+let shootInterval = null;
+function startMobileShoot() { if (!shootInterval) shootInterval = setInterval(() => { if (mobileShooting && gameRunning && !reloading) shootMobile(); }, 80); }
+function stopMobileShoot() { if (shootInterval) { clearInterval(shootInterval); shootInterval = null; } }
+btnShoot.addEventListener('touchstart', () => startMobileShoot(), { once: true });
+btnShoot.addEventListener('touchend', () => { mobileShooting = false; stopMobileShoot(); });
+
+function shootMobile() {
+  if (!player || !currentWeapon) return;
+  // 自动瞄准最近的敌人
+  let target = null, minDist = Infinity;
+  for (const z of zombies) { if (z.hp <= 0) continue; const d = Math.hypot(z.x-player.x, z.y-player.y); if (d < minDist) { minDist = d; target = z; } }
+  if (boss && boss.hp > 0) { const d = Math.hypot(boss.x-player.x, boss.y-player.y); if (d < minDist || !target) { minDist = d; target = boss; } }
+
+  const w = getWeaponStats(currentWeapon);
+  if (Date.now() - lastShot < w.fireRate) return;
+  if (magAmmo <= 0) { reloadWeapon(); return; }
+  if (cheats.infAmmo) magAmmo = w.mag;
+
+  // 瞄准方向：如果有目标用目标方向，否则用摇杆方向
+  let angle;
+  if (target && minDist < 500) {
+    angle = Math.atan2(target.y - player.y, target.x - player.x);
+    mouseX = target.x - camera.x; mouseY = target.y - camera.y;
+  } else if (mobileJoystick.active) {
+    angle = Math.atan2(mobileJoystick.dy, mobileJoystick.dx);
+    mouseX = player.x + mobileJoystick.dx * 100 - camera.x;
+    mouseY = player.y + mobileJoystick.dy * 100 - camera.y;
+  } else {
+    angle = 0;
+  }
+
+  lastShot = Date.now();
+  if (!cheats.infAmmo) magAmmo--;
+  AudioSys[w.sound]();
+  for (let j = 0; j < w.pellets; j++) {
+    const a = angle + (Math.random()-0.5) * w.spread * 1.5;
+    bullets.push(new Bullet(player.x, player.y, Math.cos(a)*w.speed, Math.sin(a)*w.speed, w.damage, w.fire, w.pierce, w.explosive));
+  }
+}
+
+// 换弹按钮
+document.getElementById('btnReload').addEventListener('touchstart', e => { e.preventDefault(); reloadWeapon(); });
+
+// 切换武器按钮
+document.getElementById('btnSwitch').addEventListener('touchstart', e => {
+  e.preventDefault();
+  const unlocked = weaponOrder.filter(k => weapons[k] && weapons[k].unlocked);
+  if (unlocked.length === 0) return;
+  weaponIdx = (weaponIdx + 1) % unlocked.length;
+  currentWeapon = unlocked[weaponIdx];
+  const s = getWeaponStats(currentWeapon);
+  magAmmo = Math.min(s.mag, Math.floor(resources.ammo));
+  reloading = false;
+  showToast('🔫 ' + weapons[currentWeapon].name);
+});
+
+// 技能按钮（当前武器特殊攻击）
+document.getElementById('btnSkill').addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (!player || !currentWeapon || !isDaytime === false) return;
+  // 向摇杆方向冲刺
+  if (mobileJoystick.active) {
+    player.x += mobileJoystick.dx * 80; player.y += mobileJoystick.dy * 80;
+  }
+  // 范围爆炸
+  for (const z of zombies) {
+    if (z.hp <= 0) continue;
+    if (Math.hypot(z.x-player.x, z.y-player.y) < 120) z.takeDamage(40);
+  }
+  screenShake = 12;
+  particles.push({x:player.x, y:player.y, color:'#FFD700', vx:0, vy:-5, life:30});
+  AudioSys.explosion && AudioSys.explosion();
+  showToast('💥 技能释放!');
+});
+
+// 备选：保留键盘作为辅助（蓝牙键盘等）
+document.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key.toLowerCase() === 'r') reloadWeapon();
+});
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// 窗口自适应（手机全屏）
+function resizeMobile() {
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+}
+window.addEventListener('resize', resizeMobile);
+window.addEventListener('orientationchange', () => setTimeout(resizeMobile, 300));
+resizeMobile();
+
+// 手机版：点击屏幕开始游戏
+canvas.addEventListener('touchstart', () => {
+  if (!gameRunning && !pauseGame) {
+    AudioSys.init();
+    startGame();
+    if (!musicOn) toggleMusic();
+  }
+}, { once: false });
+
+window.dispatchEvent(new Event('resize'));
+
+// ==================== 游戏流程 ====================
+function startGame() {
+  // startScreen hidden for mobile
+  AudioSys.init();
+  if (!musicOn) toggleMusic(); // 自动播放BGM
+
+  // 重置所有状态
+  zombies = [];
+  bullets = [];
+  particles = [];
+  pickups = [];
+  survivors = [];
+  mercenaries = [];
+  currentLevel = 0;
+  levelCleared = false;
+  wave = 1;
+  waveActive = false;
+  waveSpawnComplete = false;
+  totalKills = 0;
+  dayCount = 1;
+  isDaytime = true;
+  isBloodMoon = false;
+  bossSpawned = false;
+  boss = null;
+  dayNightTimer = DAY_DURATION;
+  
+  generateMap();
+  
+  base = new Base(MAP_W / 2, MAP_H / 2);
+  player = new Player(MAP_W / 2, MAP_H / 2 + 80);
+  spawnVehicles();
+  vehicles = vehicles; // refresh
+
+  resources = { food: 20, parts: 20, meds: 5, ammo: 100, gold: 0, crystal: 0 };
+  baseLevels = {};
+  baseUpgrades.forEach(u => baseLevels[u.id] = 0);
+  
+  magAmmo = 12;
+  currentWeapon = 'pistol';
+  reloading = false;
+  
+  // 重置武器等级
+  for (let k in weapons) {
+    weapons[k].unlocked = (k === 'pistol');
+    weapons[k].levels = { damage: 0, fireRate: 0, mag: 0, spread: 0 };
+  }
+  
+  membership = 'none';
+  revives = 0;
+  document.getElementById('vipBadge').style.display = 'none';
+  
+  renderWeaponBar();
+  
+  gameRunning = true;
+  gameLoop();
+  
+  showToast('欢迎来到废土，活下去！');
+}
+
+function gameOver() {
+  gameRunning = false;
+  
+  document.getElementById('finalStats').innerHTML = `
+    存活天数：<strong>${dayCount}</strong> 天<br>
+    抵御波次：<strong>${wave}</strong> 波<br>
+    击杀丧尸：<strong>${totalKills}</strong> 只<br>
+    收集金币：<strong>${Math.floor(resources.gold)}</strong>
+  `;
+  
+  document.getElementById('gameOver').style.display = 'flex';
+}
+
+function restartGame() {
+  document.getElementById('gameOver').style.display = 'none';
+  document.getElementById('nightOverlay').style.opacity = '0';
+  document.getElementById('bloodMoonOverlay').style.opacity = '0';
+  startGame();
+}
+
+// ==================== 作弊系统 ====================
+let cheats = { god:false, infAmmo:false, infStamina:false, fastBuild:false, doubleSpeed:false, infResources:false, autoAim:false, instantKill:false };
+let autoAimTarget = null;
+
+function toggleCheat(id) {
+  cheats[id] = !cheats[id];
+  const el = document.getElementById('chk_'+id);
+  if (el) el.checked = cheats[id];
+  if (typeof AudioSys !== 'undefined') AudioSys.menuClick && AudioSys.menuClick();
+  const names = {god:'无敌',infAmmo:'无限子弹',infStamina:'无限体力',fastBuild:'快速建造',doubleSpeed:'双倍速度',infResources:'无限物资',autoAim:'自动锁敌',instantKill:'一击必杀'};
+  showToast(cheats[id] ? '✅ '+names[id]+' 已开启' : '❌ '+names[id]+' 已关闭');
+}
+
+function giveResources() {
+  resources.food = cheats.infResources ? 999 : resources.food + 50;
+  resources.parts = cheats.infResources ? 999 : resources.parts + 50;
+  resources.meds = cheats.infResources ? 999 : resources.meds + 20;
+  resources.ammo = cheats.infResources ? 9999 : resources.ammo + 200;
+  resources.gold = cheats.infResources ? 99999 : resources.gold + 500;
+  resources.crystal = cheats.infResources ? 999 : resources.crystal + 10;
+  showToast(cheats.infResources ? '♾️ 无限物资模式' : '📦 已添加物资!');
+}
+
+function giveAllWeapons() {
+  Object.keys(weapons).forEach(k => weapons[k].unlocked = true);
+  showToast('🔫 全部武器已解锁!');
+}
+
+// ==================== 自动锁敌系统 ====================
+function autoAimUpdate() {
+  if (!cheats.autoAim || !zombies || zombies.length === 0) { autoAimTarget = null; return; }
+  let nearest = null, nearestDist = Infinity;
+  for (const z of zombies) {
+    if (z.hp <= 0) continue;
+    const dx = z.x - player.x, dy = z.y - player.y;
+    const dist = dx*dx + dy*dy;
+    if (dist < nearestDist) { nearestDist = dist; nearest = z; }
+  }
+  if (nearest) {
+    autoAimTarget = nearest;
+    mouseX = nearest.x - camera.x;
+    mouseY = nearest.y - camera.y;
+    if (nearestDist < 150 * 150 && Date.now() - lastShot > 200) {
+      autoShoot();
+    }
+  }
+}
+
+function autoShoot() {
+  if (!player || !weapons || !currentWeapon) return;
+  const w = getWeaponStats(currentWeapon);
+  if (Date.now() - lastShot < w.fireRate) return;
+  if (magAmmo <= 0) { reloadWeapon(); return; }
+  if (cheats.infAmmo) magAmmo = w.mag;
+  // Auto-fire toward nearest zombie
+  const dx = autoAimTarget.x - player.x, dy = autoAimTarget.y - player.y;
+  const angle = Math.atan2(dy, dx);
+  lastShot = Date.now();
+  if (!cheats.infAmmo) magAmmo--;
+  AudioSys[w.sound]();
+  shootBullet(angle);
+}
+
+// ==================== 载具系统 ====================
+let vehicles = [];
+let playerVehicle = null; // current vehicle player is in
+const VEHICLE_TYPES = {
+  jeep: { name:'越野吉普', icon:'🚙', speed:2.5, hp:300, armor:30, ramDamage:50, color:'#5a7a3a', width:60, height:40 },
+  bike: { name:'摩托', icon:'🏍️', speed:4, hp:120, armor:10, ramDamage:20, color:'#8a6a3a', width:30, height:20 },
+  truck: { name:'装甲卡车', icon:'🚛', speed:1.8, hp:600, armor:80, ramDamage:100, color:'#4a5a3a', width:80, height:50 },
+};
+
+class Vehicle {
+  constructor(x, y, type) {
+    const def = VEHICLE_TYPES[type];
+    this.x = x; this.y = y; this.type = type; this.name = def.name;
+    this.w = def.width; this.h = def.height; this.speed = def.speed;
+    this.hp = def.hp; this.maxHp = def.hp; this.armor = def.armor;
+    this.ramDamage = def.ramDamage; this.color = def.color;
+    this.occupied = false; this.fuel = 100;
+  }
+  draw(ctx, cam) {
+    const sx = this.x - cam.x, sy = this.y - cam.y;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(sx - this.w/2, sy - this.h/2, this.w, this.h);
+    ctx.fillStyle = '#333'; ctx.fillRect(sx - this.w/2 + 5, sy + this.h/4, this.w - 10, 6);
+    ctx.fillStyle = '#FFF'; ctx.font='10px monospace'; ctx.textAlign='center';
+    ctx.fillText(this.name, sx, sy - this.h/2 - 5);
+    if (this.hp < this.maxHp) {
+      ctx.fillStyle='#300'; ctx.fillRect(sx-this.w/2, sy-this.h/2-10, this.w, 3);
+      ctx.fillStyle='#0c0'; ctx.fillRect(sx-this.w/2, sy-this.h/2-10, this.w*(this.hp/this.maxHp), 3);
+    }
+  }
+}
+
+function spawnVehicles() {
+  vehicles = [];
+  const types = Object.keys(VEHICLE_TYPES);
+  for (let i = 0; i < 4; i++) {
+    const t = types[Math.floor(Math.random() * types.length)];
+    const vx = 200 + Math.random() * (MAP_W - 400);
+    const vy = 200 + Math.random() * (MAP_H - 400);
+    vehicles.push(new Vehicle(vx, vy, t));
+  }
+}
+
+// ==================== 空投补给 ====================
+let airdrops = [];
+function spawnAirdrop() {
+  const ax = 200 + Math.random() * (MAP_W - 400);
+  airdrops.push({ x: ax, y: -50, vy: 2, landed: false, timer: 600, looted: false });
+  showToast('🪂 空投补给正在降落!');
+}
+
+// ==================== 精英怪系统 ====================
+function spawnElite(x, y) {
+  const z = new Zombie(x, y, 'boss', {});
+  z.hp = 80 + currentLevel * 40; z.maxHp = z.hp;
+  z.speed = 1.5; z.damage = 20;
+  z.elite = true; z.name = ['屠夫','猎手','暴君','收割者'][Math.floor(Math.random()*4)];
+  z.dropLoot = true;
+  zombies.push(z);
+  showToast('⚠️ 精英怪: '+z.name+' 出现了!');
+}
+
+// ==================== 陷阱系统 ====================
+let traps = [];
+const TRAP_TYPES = { mine: {name:'地雷',damage:80,radius:60,color:'#c00',cost:20}, spikes: {name:'尖刺陷阱',damage:30,radius:40,color:'#888',cost:10}, freeze: {name:'冰冻陷阱',damage:10,radius:50,slow:0.3,color:'#0cf',cost:25} };
+
+function placeTrap(x, y, type) {
+  if (resources.parts < TRAP_TYPES[type].cost) { showToast('❌ 零件不足!'); return; }
+  resources.parts -= cheats.infResources ? 0 : TRAP_TYPES[type].cost;
+  traps.push({ x, y, type, armed: true, timer: 0 });
+  showToast('⚡ '+TRAP_TYPES[type].name+' 已部署!');
+}
+
+// ==================== 佣兵升级 ====================
+let combatDrone = null;
+function deployDrone() {
+  if (combatDrone) { combatDrone = null; showToast('🤖 无人机已召回'); return; }
+  if (resources.crystal < 5) { showToast('❌ 需要5个水晶!'); return; }
+  resources.crystal -= cheats.infResources ? 0 : 5;
+  combatDrone = { x: player.x, y: player.y, damage: 15, fireRate: 800, lastShot: 0 };
+  showToast('🤖 战斗无人机已部署!');
+}
+
+// 天气效果
+let weatherActive = null;
+let weatherTimer = 0;
+const WEATHERS = ['sandstorm','acidRain','fog','lightning'];
+function randomWeather() {
+  if (weatherTimer > 0) return;
+  weatherActive = WEATHERS[Math.floor(Math.random() * WEATHERS.length)];
+  weatherTimer = 300 + Math.random() * 600;
+  const names = {sandstorm:'🌪️ 沙尘暴',acidRain:'☣️ 酸雨',fog:'🌫️ 浓雾',lightning:'⚡ 雷暴'};
+  showToast(names[weatherActive]+' 来袭!');
+}
+
+// 生存者任务
+let rescueTargets = [];
+function spawnRescueTarget() {
+  const rx = 300 + Math.random() * (MAP_W - 600);
+  const ry = 300 + Math.random() * (MAP_H - 600);
+  rescueTargets.push({ x: rx, y: ry, rescued: false, timer: 900, reward: {gold:100+Math.random()*200, crystal:1+Math.floor(Math.random()*3)} });
+  showToast('🆘 发现幸存者! 前往救援!');
+}
+
+// ==================== 存档系统 ====================
+function saveGame() {
+  const data = { wave, dayCount, isDaytime, isBloodMoon, currentLevel, totalKills,
+    resources, inventory, membership, revives, baseLevels,
+    pos: { x: player.x, y: player.y }, hp: player.hp, armor: player.armor,
+    weapons: Object.keys(weapons).filter(k => weapons[k].unlocked),
+    time: new Date().toLocaleString()
+  };
+  localStorage.setItem('zombie_save', JSON.stringify(data));
+  showToast('💾 游戏已保存!');
+  AudioSys.upgrade();
+}
+
+function loadGame() {
+  const raw = localStorage.getItem('zombie_save');
+  if (!raw) { showToast('❌ 没有存档!'); return; }
+  try {
+    const data = JSON.parse(raw);
+    wave = data.wave; dayCount = data.dayCount; isDaytime = data.isDaytime;
+    isBloodMoon = data.isBloodMoon; currentLevel = data.currentLevel || 0;
+    totalKills = data.totalKills; resources = data.resources;
+    inventory = data.inventory || { capacity:24, items:[] };
+    membership = data.membership || 'none'; revives = data.revives || 0;
+    baseLevels = data.baseLevels || {};
+    player.x = data.pos.x; player.y = data.pos.y; player.hp = data.hp; player.armor = data.armor;
+    if (data.weapons) data.weapons.forEach(k => { if (weapons[k]) weapons[k].unlocked = true; });
+    generateMap(); base.x = MAP_W/2; base.y = MAP_H/2;
+    startBGM(isDaytime ? 'day' : (isBloodMoon ? 'bloodmoon' : 'night'));
+    // startScreen hidden for mobile
+    showToast('📂 存档已加载! (时间: '+data.time+')');
+    AudioSys.upgrade();
+  } catch(e) { showToast('❌ 存档损坏!'); }
+}
+
+function deleteSave() {
+  localStorage.removeItem('zombie_save');
+  showToast('🗑️ 存档已删除');
+}
+
+// ==================== 新系统辅助函数 ====================
+function updateTraps() {
+  for (let i = traps.length-1; i >= 0; i--) {
+    const t = traps[i];
+    if (!t.armed) continue;
+    for (let j = zombies.length-1; j >= 0; j--) {
+      const z = zombies[j];
+      if (z.hp <= 0) continue;
+      const dx = z.x - t.x, dy = z.y - t.y;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      const def = TRAP_TYPES[t.type];
+      if (dist < def.radius) {
+        z.takeDamage(def.damage);
+        if (def.slow) z.speed *= def.slow;
+        particles.push(new Particle(t.x, t.y, def.color, 0, -5, 25));
+        if (t.type === 'mine') screenShake = 10;
+        traps.splice(i, 1);
+        break;
+      }
+    }
+  }
+}
+
+function updateVehicles() {
+  for (const v of vehicles) {
+    if (v.occupied) continue;
+    // Check player entering vehicle
+    const dx = player.x - v.x, dy = player.y - v.y;
+    if (Math.abs(dx) < v.w/2 + 20 && Math.abs(dy) < v.h/2 + 20 && keys['e']) {
+      playerVehicle = v; v.occupied = true;
+      showToast('🚗 进入: '+v.name+'! 按X下车');
+      break;
+    }
+    // Vehicle rams zombies
+    for (const z of zombies) {
+      if (z.hp <= 0) continue;
+      const zdx = z.x - v.x, zdy = z.y - v.y;
+      if (Math.abs(zdx) < v.w/2 + 10 && Math.abs(zdy) < v.h/2 + 10) {
+        z.takeDamage(10); v.hp -= 1;
+      }
+    }
+    if (v.hp <= 0) { vehicles.splice(vehicles.indexOf(v), 1); showToast('💥 '+v.name+' 已损毁!'); }
+  }
+  if (playerVehicle && keys['x']) {
+    player.x = playerVehicle.x + 40; player.y = playerVehicle.y;
+    playerVehicle.occupied = false; playerVehicle = null;
+    keys['x'] = false;
+    showToast('🚶 已下车');
+  }
+  if (playerVehicle) {
+    playerVehicle.x += (keys['d']?1:keys['a']?-1:0) * playerVehicle.speed * 2;
+    playerVehicle.y += (keys['s']?1:keys['w']?-1:0) * playerVehicle.speed * 2;
+    player.x = playerVehicle.x; player.y = playerVehicle.y;
+  }
+}
+
+function updateAirdrops() {
+  for (let i = airdrops.length-1; i >= 0; i--) {
+    const a = airdrops[i];
+    if (!a.landed) { a.y += a.vy; a.timer--; if (a.y >= MAP_H/2 + Math.random()*MAP_H/2) { a.landed = true; showToast('🪂 空投已落地!'); } }
+    if (a.landed && !a.looted) {
+      const dx = player.x - a.x, dy = player.y - a.y;
+      if (Math.abs(dx) < 40 && Math.abs(dy) < 40) {
+        a.looted = true;
+        resources.gold += 200; resources.ammo += 100; resources.crystal += 3;
+        showToast('📦 获得空投补给!');
+      }
+    }
+    if (a.timer <= 0) airdrops.splice(i, 1);
+  }
+}
+
+function updateDrone() {
+  if (!combatDrone) return;
+  combatDrone.x += (player.x - combatDrone.x) * 0.08;
+  combatDrone.y += (player.y - combatDrone.y) * 0.08;
+  if (Date.now() - combatDrone.lastShot > combatDrone.fireRate) {
+    let nearest = null, nd = Infinity;
+    for (const z of zombies) {
+      if (z.hp <= 0) continue;
+      const d = Math.hypot(z.x-combatDrone.x, z.y-combatDrone.y);
+      if (d < nd && d < 200) { nd = d; nearest = z; }
+    }
+    if (nearest) {
+      nearest.takeDamage(combatDrone.damage);
+      combatDrone.lastShot = Date.now();
+      const angle = Math.atan2(nearest.y-combatDrone.y, nearest.x-combatDrone.x);
+      particles.push(new Particle(combatDrone.x, combatDrone.y, '#0ff', Math.cos(angle)*3, Math.sin(angle)*3, 15));
+    }
+  }
+}
+
+function updateRescueTargets() {
+  for (let i = rescueTargets.length-1; i >= 0; i--) {
+    const rt = rescueTargets[i];
+    rt.timer--;
+    if (!rt.rescued) {
+      const dx = player.x - rt.x, dy = player.y - rt.y;
+      if (Math.abs(dx) < 40 && Math.abs(dy) < 40) {
+        rt.rescued = true;
+        resources.gold += rt.reward.gold; resources.crystal += rt.reward.crystal;
+        player.hp = Math.min(player.maxHp, player.hp + 30);
+        showToast('✅ 幸存者获救! +'+rt.reward.gold+'金币 +'+rt.reward.crystal+'水晶');
+      }
+    }
+    if (rt.timer <= 0) { rescueTargets.splice(i, 1); if (!rt.rescued) showToast('💀 幸存者死亡...'); }
+  }
+}
+
+function updateWeather() {
+  if (!weatherActive) return;
+  weatherTimer--;
+  switch (weatherActive) {
+    case 'sandstorm': player.speed = 1.8; document.getElementById('nightOverlay').style.opacity = '0.5'; document.getElementById('nightOverlay').style.background = 'rgba(194,178,128,0.4)'; break;
+    case 'acidRain': if (player.hp > 0 && Math.random()<0.02) player.takeDamage(2); document.getElementById('nightOverlay').style.opacity = '0.4'; break;
+    case 'fog': document.getElementById('nightOverlay').style.opacity = '0.6'; break;
+    case 'lightning': if (Math.random()<0.005) { screenShake=15; const zs=zombies.filter(z=>z.hp>0); if(zs.length>0){const z=zs[Math.floor(Math.random()*zs.length)];z.takeDamage(50);particles.push(new Particle(z.x,z.y,'#FF0',0,-8,40));} } break;
+  }
+  if (weatherTimer <= 0) {
+    weatherActive = null;
+    document.getElementById('nightOverlay').style.opacity = isDaytime ? '0' : '1';
+    player.speed = 2.2;
+    showToast('🌈 天气好转了');
+  }
+}
+
+function shootBullet(angle) {
+  const w = getWeaponStats(currentWeapon);
+  for (let j = 0; j < w.pellets; j++) {
+    const a = angle + (Math.random()-0.5) * w.spread * 1.5;
+    bullets.push(new Bullet(player.x, player.y, Math.cos(a)*w.speed, Math.sin(a)*w.speed, w.damage, w.fire, w.pierce, w.explosive));
+  }
+}
+
+// ==================== 设置面板 ====================
+let settingsOpen = false;
+function toggleSettings() {
+  settingsOpen = !settingsOpen;
+  document.getElementById('settingsPanel').style.display = settingsOpen ? 'block' : 'none';
+  if (settingsOpen) {
+    document.getElementById('volMaster').value = (AudioSys.ctx && AudioSys.ctx.destination) ? 30 : 30;
+  }
+}
+function setVolume(id, val) {
+  // Master volume controlled via gain node
+  AudioSys.init();
+  const v = val / 100;
+  if (AudioSys.ctx && AudioSys.ctx.destination) {
+    // Store vol preference
+    localStorage.setItem('zombie_vol', val);
+  }
+  showToast('🔊 音量: '+val+'%');
+}
+</script>
+
+<!-- 设置面板 -->
+<div id="settingsPanel" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  background:rgba(10,8,6,0.97); border:2px solid #5a4a2a; z-index:999; padding:20px; min-width:320px;
+  color:#b8b0a0; font-size:12px; max-height:80vh; overflow-y:auto; border-radius:8px;">
+  <h2 style="color:#d4b860; margin:0 0 15px; text-align:center;">⚙️ 设置</h2>
+
+  <div style="margin-bottom:12px; border-bottom:1px solid #2a2a1a; padding-bottom:10px;">
+    <b>🔊 音效设置</b><br>
+    主音量: <input type="range" id="volMaster" min="0" max="100" value="30" oninput="setVolume('master',this.value)" style="width:100%">
+    <label><input type="checkbox" id="chkMusic" checked onchange="this.checked?startBGM(isDaytime?'day':isBloodMoon?'bloodmoon':'night'):stopBGM()"> 背景音乐</label> &nbsp;
+    <label><input type="checkbox" id="chkSFX" checked> 音效</label>
+  </div>
+
+  <div style="margin-bottom:12px; border-bottom:1px solid #2a2a1a; padding-bottom:10px;">
+    <b>🛠️ 作弊/修改器</b><br>
+    <label><input type="checkbox" id="chk_god" onchange="toggleCheat('god')"> 无敌模式 (无限生命)</label><br>
+    <label><input type="checkbox" id="chk_infAmmo" onchange="toggleCheat('infAmmo')"> 无限子弹</label><br>
+    <label><input type="checkbox" id="chk_infStamina" onchange="toggleCheat('infStamina')"> 无限体力</label><br>
+    <label><input type="checkbox" id="chk_fastBuild" onchange="toggleCheat('fastBuild')"> 快速建造</label><br>
+    <label><input type="checkbox" id="chk_doubleSpeed" onchange="toggleCheat('doubleSpeed')"> 双倍移速</label><br>
+    <label><input type="checkbox" id="chk_infResources" onchange="toggleCheat('infResources')"> ♾️ 无限物资</label><br>
+    <label><input type="checkbox" id="chk_autoAim" onchange="toggleCheat('autoAim')"> 🎯 自动锁敌开火</label><br>
+    <label><input type="checkbox" id="chk_instantKill" onchange="toggleCheat('instantKill')"> ☠️ 一击必杀</label><br>
+    <button onclick="giveResources()" class="sideBtn" style="width:auto;padding:4px 10px;margin:3px;">📦 加物资</button>
+    <button onclick="giveAllWeapons()" class="sideBtn" style="width:auto;padding:4px 10px;margin:3px;">🔫 解锁全武器</button>
+    <button onclick="deployDrone()" class="sideBtn" style="width:auto;padding:4px 10px;margin:3px;">🤖 部署无人机</button>
+  </div>
+
+  <div style="margin-bottom:12px; border-bottom:1px solid #2a2a1a; padding-bottom:10px;">
+    <b>💾 存档管理</b><br>
+    <button onclick="saveGame()" class="sideBtn" style="width:auto;padding:6px 15px;margin:4px;">💾 保存游戏</button>
+    <button onclick="loadGame()" class="sideBtn" style="width:auto;padding:6px 15px;margin:4px;">📂 读取存档</button>
+    <button onclick="deleteSave()" class="sideBtn" style="width:auto;padding:6px 15px;margin:4px;border-color:#602020;">🗑️ 删除存档</button>
+    <div style="color:#555;font-size:10px;margin-top:4px;">存档保存在浏览器本地</div>
+  </div>
+
+  <div style="margin-bottom:12px; border-bottom:1px solid #2a2a1a; padding-bottom:10px;">
+    <b>🎮 快捷键</b><br>
+    <span style="color:#888;">F1</span> 开关设置 &nbsp;
+    <span style="color:#888;">F5</span> 快速保存 &nbsp;
+    <span style="color:#888;">F9</span> 快速读档
+  </div>
+
+  <div style="text-align:center;">
+    <button onclick="toggleSettings()" class="sideBtn" style="width:auto;padding:8px 30px;border-color:#d4b860;color:#d4b860;">关闭</button>
+  </div>
+</div>
+
+</body>
+</html>
